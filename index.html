@@ -87,11 +87,23 @@ body.free #explCount{display:block}
 #pseudoWrap label{font-size:12.5px;color:var(--ink-dim);letter-spacing:.02em}
 #pseudoInput{width:min(260px,70vw);text-align:center;background:#1b1e25;border:1px solid rgba(255,255,255,.18);color:#fff;padding:10px 14px;border-radius:10px;font-size:15px;font-family:inherit}
 #pseudoInput:focus{outline:none;border-color:var(--accent)}
-#integrity{position:absolute;left:50%;top:calc(50px + env(safe-area-inset-top,0px));transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:4px;z-index:5;pointer-events:none}
+#integrity{position:absolute;left:50%;top:calc(42px + env(safe-area-inset-top,0px));transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:10px;z-index:5;pointer-events:none}
 body.free #integrity{display:flex}
+#hudCard{display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(10,12,16,.46);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px 20px 12px;box-shadow:0 8px 24px rgba(0,0,0,.3);backdrop-filter:blur(4px)}
 #integrity .lbl{font-size:11.5px;letter-spacing:.03em;color:var(--ink-dim);text-shadow:0 1px 3px rgba(0,0,0,.7)}
-#integrity .bar{width:200px;height:6px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+#integrity .bar{width:210px;height:6px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.4)}
 #integrity .bar i{display:block;height:100%;width:15%;background:linear-gradient(90deg,#ef5b52,#f2c21a 55%,#6fd08c);transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+#sessionBox{display:none;flex-direction:column;align-items:center;gap:7px;background:rgba(10,12,16,.4);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:9px 16px;box-shadow:0 8px 24px rgba(0,0,0,.28);backdrop-filter:blur(4px);pointer-events:auto;min-width:200px}
+#sessionTop{display:flex;align-items:center;gap:10px}
+#sessionCode{font-size:11px;letter-spacing:.04em;color:var(--ink-dim);text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap}
+#sessionCopyBtn{pointer-events:auto;margin:0;padding:3px 11px;font-size:11.5px;border-radius:7px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;white-space:nowrap}
+#sessionCopyBtn:hover{background:rgba(255,255,255,.18)}
+#playersList{display:flex;flex-direction:column;gap:4px;width:100%}
+.pRow{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink-dim);text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap}
+.pRow.me{color:#fff;font-weight:600}
+.pDot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 6px currentColor}
+.pName{overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.pProg{margin-left:auto;font-size:10.5px;color:var(--ink-faint);letter-spacing:.02em}
 #endWrap{position:absolute;inset:0;background:rgba(5,6,9,.85);display:none;align-items:center;justify-content:center;z-index:40;backdrop-filter:blur(3px)}
 #endWrap.show{display:flex}
 #endCard{max-width:min(620px,92vw);max-height:88vh;overflow:auto;background:#13151a;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:34px 36px;box-shadow:0 30px 90px rgba(0,0,0,.65);text-align:center}
@@ -106,6 +118,13 @@ body.free #integrity{display:flex}
 .lbTable h4{margin:0 0 10px;font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
 .lbTable ol{margin:0;padding:0 0 0 20px;font-size:13.5px;color:#d8dbe1;line-height:1.9}
 .lbTable li.me{color:#fff;font-weight:700}
+#mpBoard{background:#191c22;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;text-align:left;margin-bottom:18px}
+#mpBoard h4{margin:0 0 10px;font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
+#mpBoard ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+#mpBoard li{display:flex;align-items:center;gap:8px;font-size:13.5px;color:#d8dbe1}
+#mpBoard li.me{color:#fff;font-weight:700}
+#mpBoard .mpName{overflow:hidden;text-overflow:ellipsis}
+#mpBoard .mpStatus{margin-left:auto;font-size:12px;color:var(--ink-dim);white-space:nowrap}
 #endCard .replay{margin-top:24px;background:var(--accent);color:#0b0c0f;border:0;padding:11px 24px;border-radius:999px;font-weight:700;cursor:pointer;font-size:14px}
 #keys.gone{opacity:0}
 #keys kbd{font-family:inherit;font-weight:600;color:var(--ink-dim)}
@@ -143,11 +162,20 @@ body.free #integrity{display:flex}
   <button class="nav" id="prev" aria-label="Étape précédente">‹</button>
   <button class="nav" id="next" aria-label="Étape suivante">›</button>
   <div id="reticle"></div>
-  <div id="freehint">Déplacement libre — <kbd>Z Q S D</kbd> marcher, souris pour regarder, <kbd>Maj</kbd> courir, <kbd>E</kbd> interagir, <kbd>←</kbd>/<kbd>→</kbd> changer de salle (une fois la borne trouvée)</div>
+  <div id="freehint">Déplacement libre — <kbd>Z Q S D</kbd> marcher, souris pour regarder, <kbd>Maj</kbd> courir, <kbd>Espace</kbd> sauter, <kbd>E</kbd> interagir / franchir une porte</div>
   <div id="explCount"></div>
   <div id="interactPrompt">Appuie sur <kbd>E</kbd> pour interagir</div>
   <div id="toast"></div>
-  <div id="integrity"><span class="lbl" id="integrityLbl">Data center : 15 % sauvé</span><div class="bar"><i id="integrityBar"></i></div><span class="lbl" id="sessionLbl"></span><button id="sessionCopyBtn" type="button" title="Copier le code de partie" style="display:none;margin-left:8px;padding:2px 10px;font-size:.85em;border-radius:6px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;opacity:.85">Copier le code</button></div>
+  <div id="integrity">
+    <div id="hudCard">
+      <span class="lbl" id="integrityLbl">Data center : 15 % sauvé</span>
+      <div class="bar"><i id="integrityBar"></i></div>
+    </div>
+    <div id="sessionBox">
+      <div id="sessionTop"><span id="sessionCodeLbl"></span><button id="sessionCopyBtn" type="button" title="Copier le code de partie">Copier</button></div>
+      <div id="playersList"></div>
+    </div>
+  </div>
 </div>
 
 <div id="modalWrap">
@@ -168,6 +196,7 @@ body.free #integrity{display:flex}
       <div><b id="endTime">00:00</b><span>Temps</span></div>
       <div><b id="endErrors">0</b><span>Erreurs</span></div>
     </div>
+    <div id="mpBoard" style="display:none"><h4>🏆 Classement de la partie</h4><ol id="mpList"></ol></div>
     <div id="lbTables">
       <div class="lbTable"><h4 id="lbTitle1">⏱ Meilleurs temps</h4><ol id="lbTime"></ol></div>
       <div class="lbTable"><h4 id="lbTitle2">🎯 Moins d'erreurs</h4><ol id="lbErr"></ol></div>
@@ -193,8 +222,8 @@ body.free #integrity{display:flex}
     <div class="in-keys">
       <span><b>→ / Espace / Entrée</b> entrer dans le bâtiment</span>
       <span><b>Z Q S D</b> + souris se déplacer</span>
-      <span><b>E</b> interagir avec une borne</span>
-      <span><b>← / →</b> changer de salle</span>
+      <span><b>Maj</b> courir, <b>Espace</b> sauter</span>
+      <span><b>E</b> interagir avec une borne / une porte</span>
       <span><b>M</b> son</span>
       <span><b>F</b> plein écran</span>
     </div>
@@ -1026,6 +1055,35 @@ function buildRiddleMarker(r){
   const floorLite=new T.PointLight(new T.Color(r.accent).getHex(),.15,.9,2);floorLite.position.set(0,.1,0);grp.add(floorLite);
   return {grp,mat:screenMat,light:lite};
 }
+// porte physique vers la salle suivante : plus de changement de salle aux touches fléchées — il faut s'en
+// approcher et appuyer sur E, et elle ne s'ouvre (visuellement, en vert) qu'une fois la borne de la salle résolue.
+function buildDoor(r,idx){
+  const ang=(idx*2.39)%(Math.PI*2);
+  const dir=new V3(Math.sin(ang),0,Math.cos(ang));
+  const pos=r.rpos.clone().addScaledVector(dir,3.4);
+  const zb=ZONE_BOUNDS[r.zone];
+  if(zb){pos.x=Math.max(zb.x0+.7,Math.min(zb.x1-.7,pos.x));pos.z=Math.max(zb.z0+.7,Math.min(zb.z1-.7,pos.z));}
+  pos.y=r.rpos.y;
+  if(r.zone==='hall'&&pos.y>-.3)resolveRowCollision(pos);
+  const grp=new T.Group();grp.position.copy(pos);scene.add(grp);
+  const frameM=std({color:0x2a2e35,roughness:.5,metalness:.6});
+  boxAt(.14,2.3,.14,frameM,-.62,1.15,0,grp);boxAt(.14,2.3,.14,frameM,.62,1.15,0,grp);boxAt(1.4,.14,.14,frameM,0,2.33,0,grp);
+  const [c,ctx]=cvs(64,64);ctx.fillStyle='#fff';ctx.fillRect(0,0,64,64);
+  const panelMat=new T.MeshStandardMaterial({map:tex(c),emissive:new T.Color(0xef5b52),emissiveIntensity:.35,roughness:.5,metalness:.1,side:T.DoubleSide,transparent:true,opacity:.9});
+  plane(1.1,2.1,panelMat,0,1.08,0,0,grp);
+  const lite=new T.PointLight(0xef5b52,.4,2.4,2);lite.position.set(0,1.2,.3);grp.add(lite);
+  let unlocked=null;
+  const setUnlocked=(u)=>{
+    if(u===unlocked)return;unlocked=u;
+    panelMat.color.setHex(u?0x1a2420:0x1a1216);
+    panelMat.emissive.setHex(u?0x6fd08c:0xef5b52);panelMat.emissiveIntensity=u?.6:.35;
+    lite.color.setHex(u?0x6fd08c:0xef5b52);lite.intensity=u?.7:.4;
+  };
+  setUnlocked(false);
+  grp.visible=false;
+  return {grp,pos,setUnlocked};
+}
+const doors=[];
 const AISLE_Z=[-6.5,-3.8,-1.1,1.6,4.3];
 function nearestAisleZ(z){return AISLE_Z.reduce((a,b)=>Math.abs(b-z)<Math.abs(a-z)?b:a);}
 ROOMS.forEach((r,idx)=>{
@@ -1056,6 +1114,7 @@ ROOMS.forEach((r,idx)=>{
   if(zb){r.rpos.x=Math.max(zb.x0+.45,Math.min(zb.x1-.45,r.rpos.x));r.rpos.z=Math.max(zb.z0+.45,Math.min(zb.z1-.45,r.rpos.z));}
   if(r.zone==='hall'&&r.rpos.y>-.3)resolveRowCollision(r.rpos);
   r.marker=buildRiddleMarker(r);r.solved=false;r.marker.grp.visible=false;
+  if(idx<ROOMS.length-1)doors[idx]=buildDoor(r,idx);
 });
 
 /* ---------------------------------------------------------------- HUD */
@@ -1106,20 +1165,29 @@ function clampToZone(zone){
 // on marche au sol comme une personne, et on se baisse automatiquement au-dessus de la trappe.
 const STAND_EYE=1.65,UNDER_EYE=-.3;
 function inHoleXZ(p){const h=ZONE_BOUNDS.hall.hole;return p.x>=h.x0-.4&&p.x<=h.x1+.4&&p.z>=h.z0-.4&&p.z<=h.z1+.4;}
+// état persistant « sous le faux plancher » : seule la traversée de la trappe fait basculer cet état (et non
+// la position courante à chaque frame), donc on peut s'éloigner et explorer tout le sous-sol sans remonter
+// tout seul dès qu'on avance — exactement comme descendre/remonter un escalier, pas un ascenseur.
+let underfloor=false,holeInsidePrev=false;
 /* ---------------------------------------------------------------- free-roam + salles + énigmes */
-let freeMode=false,pointerLocked=false,yaw=0,pitch=0,exploring=false,roomIdx=-1,riddleOpen=false,activeNear=null;
+let freeMode=false,pointerLocked=false,yaw=0,pitch=0,exploring=false,roomIdx=-1,riddleOpen=false,activeNear=null,activeDoor=null;
 const fkeys={f:0,b:0,l:0,r:0,sprint:0};const _fwd=new V3(),_rgt=new V3(),_mv=new V3();const _feu=new T.Euler(0,0,0,'YXZ');
 const HUD_HIDE_IDS=['cap','prog','prev','next','keys','tag','count'];
-// avatar simple (jambes + bas du corps) : visible en vue libre, aligné sur le lacet de la caméra (pas le tangage,
-// sinon le corps basculerait quand on regarde en haut/bas) ; on le voit en baissant les yeux, comme une vraie personne.
+// saut : une simple impulsion verticale par-dessus la hauteur de sol (elle-même gérée par la gravité ci-dessous),
+// pour rester compatible avec la marche existante plutôt que de réintroduire du vol libre.
+let groundEyeY=STAND_EYE,jumpVel=0,jumpOffset=0;
+const GRAVITY=11,JUMP_VEL=4.1;
+// avatar : visible en vue libre, aligné sur le lacet de la caméra (pas le tangage, sinon le corps basculerait
+// quand on regarde en haut/bas) ; on le voit en baissant les yeux, comme une vraie personne. Formes arrondies
+// (cylindres fuselés + sphères) plutôt que des pavés bruts : on garde les mêmes repères verticaux que l'ancienne
+// version pour ne pas dérégler l'angle de vue qui le rend visible.
 function buildBody(){
-  // offsets relatifs à la hauteur des yeux (gabarit adulte standard : hanches ≈ 0,9 m, pieds ≈ sol)
   const g=new T.Group();
-  const cloth=std({color:0x30343b,roughness:.85,metalness:.05}),shoe=std({color:0x15161a,roughness:.5,metalness:.1});
-  boxAt(.36,.24,.24,cloth,0,-.75,0,g);
+  const cloth=std({color:0x30343b,roughness:.8,metalness:.08}),shoe=std({color:0x15161a,roughness:.45,metalness:.12});
+  cyl(.19,.16,.26,14,cloth,0,-.75,0,g);
   for(const side of [-1,1]){
-    boxAt(.16,.8,.16,cloth,side*.1,-1.15,0,g);
-    boxAt(.17,.09,.27,shoe,side*.1,-1.58,-.08,g);
+    cyl(.1,.08,.78,12,cloth,side*.1,-1.17,0,g);
+    const sh=add(new T.SphereGeometry(.1,10,8),shoe,side*.1,-1.56,-.06,g);sh.scale.set(1.25,.55,1.7);
   }
   g.visible=false;scene.add(g);return g;
 }
@@ -1128,6 +1196,7 @@ function enterFree(){
   anim=null;fadeEl.style.opacity=0;
   if(!freeMode){freeMode=true;document.body.classList.add('free');HUD_HIDE_IDS.forEach(id=>{const el=$(id);if(el)el.style.display='none';});}
   const e0=new T.Euler().setFromQuaternion(camera.quaternion,'YXZ');yaw=e0.y;pitch=e0.x;
+  groundEyeY=camera.position.y;jumpVel=0;jumpOffset=0;underfloor=false;holeInsidePrev=false;
 }
 function updateFree(dt){
   if(riddleOpen)return;
@@ -1139,18 +1208,37 @@ function updateFree(dt){
   if(_mv.lengthSq()>1e-6){_mv.normalize().multiplyScalar(spd);camera.position.x+=_mv.x;camera.position.z+=_mv.z;}
   if(exploring&&roomIdx>=0){
     const z=ROOMS[roomIdx].zone;clampToZone(z);
-    const underHole=z==='hall'&&inHoleXZ(camera.position);
-    if(z==='hall'&&!underHole)resolveRowCollision(camera.position);
+    if(z==='hall'){
+      const insideHole=inHoleXZ(camera.position);
+      if(insideHole&&!holeInsidePrev)underfloor=!underfloor;
+      holeInsidePrev=insideHole;
+    }else{underfloor=false;holeInsidePrev=false;}
+    if(z==='hall'&&!underfloor)resolveRowCollision(camera.position);
     // gravité : on se cale automatiquement sur la hauteur du sol (debout), et on se baisse tout seul au-dessus de la trappe —
-    // comme des marches, pas comme un ascenseur libre
-    const targetY=underHole?UNDER_EYE:STAND_EYE;
-    camera.position.y+=(targetY-camera.position.y)*Math.min(1,dt*6);
+    // comme des marches, pas comme un ascenseur libre. Le saut ajoute une impulsion par-dessus cette hauteur de sol.
+    const targetY=underfloor?UNDER_EYE:STAND_EYE;
+    groundEyeY+=(targetY-groundEyeY)*Math.min(1,dt*6);
+    if(jumpVel!==0||jumpOffset>0){
+      jumpVel-=GRAVITY*dt;jumpOffset+=jumpVel*dt;
+      if(jumpOffset<0){jumpOffset=0;jumpVel=0;}
+    }
+    camera.position.y=groundEyeY+jumpOffset;
     const r=ROOMS[roomIdx];
     const near=!r.solved&&camera.position.distanceTo(r.rpos)<2.4?r:null;
-    activeNear=near;$('interactPrompt').classList.toggle('show',!!near);
+    activeNear=near;
+    // porte vers la salle suivante : plus de changement de salle aux flèches — il faut s'approcher de la porte
+    // et appuyer sur E (seulement une fois la borne de la salle résolue).
+    const door=doors[roomIdx];
+    const doorNear=(!near&&door&&camera.position.distanceTo(door.pos)<2.3)?door:null;
+    activeDoor=doorNear;
+    if(door)door.setUnlocked(r.solved);
+    const ip=$('interactPrompt');
+    if(near){ip.innerHTML='Appuie sur <kbd>E</kbd> pour interagir';ip.classList.add('show');}
+    else if(doorNear){ip.innerHTML=r.solved?'Appuie sur <kbd>E</kbd> pour passer à la salle suivante':'Trouve d’abord la borne 🧩 de cette salle';ip.classList.add('show');}
+    else ip.classList.remove('show');
     // le corps ne se voit pas dans le vide étroit sous le faux plancher (on y rampe, accroupi)
-    playerBody.visible=!underHole;
-    if(!underHole){
+    playerBody.visible=!underfloor;
+    if(!underfloor){
       // le corps est légèrement avancé par rapport aux yeux (comme un vrai corps), sinon il faut regarder
       // presque à la verticale pour l'apercevoir — en le décalant vers l'avant, un simple coup d'œil vers le bas suffit
       playerBody.position.copy(camera.position).addScaledVector(_fwd,.32);
@@ -1175,7 +1263,9 @@ function enterRoom(i){
   if(i<0||i>=ROOMS.length)return;
   if(roomIdx<0&&i===0)gameStartTime=Date.now();
   ROOMS.forEach(x=>{x.marker.grp.visible=false;});
+  doors.forEach(d=>{if(d)d.grp.visible=false;});
   roomIdx=i;exploring=true;const r=ROOMS[i];r.marker.grp.visible=true;
+  if(doors[i])doors[i].grp.visible=true;
   if(document.pointerLockElement)document.exitPointerLock();
   fkeys.f=fkeys.b=fkeys.l=fkeys.r=fkeys.sprint=0;
   fadeEl.style.opacity=1;
@@ -1183,7 +1273,7 @@ function enterRoom(i){
     applyZone(r.zone);camera.position.copy(r.pos);look.copy(r.tgt);camera.lookAt(look);
     enterFree();updateExplCount();updateIntegrity();
     setTimeout(()=>{fadeEl.style.opacity=0;},30);
-    if(i===0)showToast(`${playerName}, Nord-DC1 est en péril : explore le bâtiment avec Z Q S D (souris pour regarder), trouve les bornes 🧩 et réponds juste pour le sauver salle après salle. ← / → pour changer de salle.`,11000);
+    if(i===0)showToast(`${playerName}, Nord-DC1 est en péril : explore le bâtiment avec Z Q S D (souris pour regarder, Maj pour courir, Espace pour sauter), trouve les bornes 🧩 et réponds juste pour le sauver salle après salle. Une fois une salle résolue, dirige-toi vers la porte et appuie sur E pour passer à la suivante.`,12000);
   },620);
 }
 function openRiddle(r){
@@ -1209,7 +1299,7 @@ function openRiddle(r){
         b.classList.add('right');
         if(!r.solved){r.solved=true;r.marker.mat.emissiveIntensity=.3;updateExplCount();updateIntegrity();pushProgress();
           if(ROOMS.every(x=>x.solved))setTimeout(endGame,900);
-          else setTimeout(()=>showToast('Bien joué ! La porte vers la salle suivante est déverrouillée (→).',4000),400);}
+          else setTimeout(()=>showToast('Bien joué ! La porte vers la salle suivante est déverrouillée : dirige-toi vers elle et appuie sur E.',4500),400);}
       }else{b.classList.add('wrong');cho.children[r.correct].classList.add('right');if(!r.solved){gameErrors++;pushProgress();}}
       factEl.classList.add('show');closeBtn.classList.add('show');
     });
@@ -1242,19 +1332,35 @@ function makeNameSprite(text){
   if(x.roundRect)x.roundRect(rx,12,tw,40,9);else x.rect(rx,12,tw,40);
   x.fill();x.fillStyle='#fff';x.fillText(text,128,33);
   const spr=new T.Sprite(new T.SpriteMaterial({map:tex(c,{srgb:false}),depthTest:false,transparent:true}));
-  spr.scale.set(1.15,.29,1);spr.position.set(0,.62,0);
+  spr.scale.set(1.15,.29,1);spr.position.set(0,.42,0);
   return spr;
 }
+// avatar des autres joueurs : silhouette arrondie (cylindres fuselés + sphères) plutôt que des pavés bruts
+// façon « blocs » — mêmes repères verticaux que l'ancienne version (tête, torse, hanches, jambes, chaussures)
+// pour ne pas dérégler la façon dont elle se voit, mais avec des formes bien plus douces et « habillées ».
 function buildRemoteAvatar(id,name){
   const g=new T.Group();
-  const cloth=std({color:colorForId(id),roughness:.8}),skin=std({color:0xd9a876,roughness:.75}),shoe=std({color:0x15161a,roughness:.5});
-  boxAt(.26,.26,.24,skin,0,.08,0,g);
-  boxAt(.42,.5,.26,cloth,0,-.32,0,g);
-  boxAt(.36,.24,.24,cloth,0,-.75,0,g);
+  const col=colorForId(id);
+  const cloth=std({color:col,roughness:.55,metalness:.1}),skin=std({color:0xd9a876,roughness:.7}),shoe=std({color:0x15161a,roughness:.45,metalness:.1}),hair=std({color:0x20232b,roughness:.75});
+  // tête ronde + petite calotte façon cheveux courts
+  add(new T.SphereGeometry(.155,20,16),skin,0,.08,0,g);
+  add(new T.SphereGeometry(.16,20,16,0,6.283,0,1.65),hair,0,.1,0,g);
+  cyl(.045,.055,.1,10,skin,0,-.1,0,g);
+  // torse fuselé, épaules arrondies
+  add(new T.SphereGeometry(.21,16,12),cloth,0,-.2,0,g);
+  cyl(.19,.15,.42,16,cloth,0,-.45,0,g);
+  // hanches
+  cyl(.15,.13,.22,14,cloth,0,-.76,0,g);
+  // bras : épaule ronde + bras fuselé + main
   for(const side of [-1,1]){
-    boxAt(.14,.46,.14,cloth,side*.24,-.42,0,g);
-    boxAt(.16,.8,.16,cloth,side*.1,-1.15,0,g);
-    boxAt(.17,.09,.27,shoe,side*.1,-1.58,-.08,g);
+    add(new T.SphereGeometry(.09,12,10),cloth,side*.26,-.26,0,g);
+    cyl(.075,.05,.5,10,cloth,side*.26,-.52,0,g);
+    add(new T.SphereGeometry(.055,10,8),skin,side*.26,-.78,0,g);
+  }
+  // jambes fuselées + chaussures
+  for(const side of [-1,1]){
+    cyl(.1,.08,.78,12,cloth,side*.1,-1.17,0,g);
+    const sh=add(new T.SphereGeometry(.1,10,8),shoe,side*.1,-1.56,.04,g);sh.scale.set(1.25,.55,1.7);
   }
   g.add(makeNameSprite(name));
   g.visible=false;scene.add(g);
@@ -1275,14 +1381,22 @@ function updateRemotePlayers(dt){
 }
 function genCode(){const C='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<4;i++)s+=C[Math.floor(Math.random()*C.length)];return s;}
 function renderSessionLabel(){
-  if(!sessionCode){$('sessionLbl').textContent='';return;}
+  const box=$('sessionBox');
+  if(!sessionCode){box.style.display='none';return;}
+  box.style.display='flex';
   const now=Date.now();
   const people=Object.values(players).filter(p=>now-p.ts<20000);
   if(!people.find(p=>p.id===playerId))people.push({id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded});
-  const n=people.length;
-  const others=people.filter(p=>p.id!==playerId).map(p=>`${p.name} ${p.solved}/${ROOMS.length}${p.done?' ✓':''}`);
+  people.sort((a,b)=>(a.id===playerId?-1:b.id===playerId?1:0)||b.solved-a.solved);
   const status=mqttOnline?'':' (connexion…)';
-  $('sessionLbl').textContent=`Code : ${sessionCode} — ${n} joueur${n>1?'s':''}${status}`+(others.length?' · '+others.join(' · '):'');
+  $('sessionCodeLbl').textContent=`Code ${sessionCode}${status} · ${people.length} joueur${people.length>1?'s':''}`;
+  const pl=$('playersList');pl.innerHTML='';
+  people.forEach(p=>{
+    const row=document.createElement('div');row.className='pRow'+(p.id===playerId?' me':'');
+    const hex=new T.Color(colorForId(p.id)).getHexString();
+    row.innerHTML=`<i class="pDot" style="background:#${hex};color:#${hex}"></i><span class="pName">${p.name}${p.id===playerId?' (toi)':''}</span><span class="pProg">${p.solved}/${ROOMS.length}${p.done?' ✓':''}</span>`;
+    pl.appendChild(row);
+  });
   const cb=$('sessionCopyBtn');if(cb)cb.style.display='inline-block';
 }
 function publishProgress(){
@@ -1359,6 +1473,25 @@ function renderLbTable(id,list,myEntry){
   });
   if(!list.length)ol.innerHTML='<li>Pas encore de score</li>';
 }
+// classement multijoueur en direct, à partir des états synchronisés par MQTT (players{}) : qui a fini, qui est
+// encore en train de jouer et où il en est, et qui a gagné — plus fiable que l'ancien classement local (qui
+// dépendait de window.storage, absent une fois déployé, d'où le « indisponible hors ligne »).
+function renderMultiplayerBoard(){
+  if(!sessionCode){$('mpBoard').style.display='none';return;}
+  const now=Date.now();
+  const people=Object.values(players).filter(p=>now-p.ts<30000);
+  if(!people.find(p=>p.id===playerId))people.push({id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded});
+  people.sort((a,b)=>(b.done===true)-(a.done===true)||b.solved-a.solved||a.errors-b.errors);
+  const ol=$('mpList');ol.innerHTML='';
+  people.forEach((p,i)=>{
+    const li=document.createElement('li');if(p.id===playerId)li.classList.add('me');
+    const med=(i===0&&p.done)?'🏆 ':'';
+    const status=p.done?'<b>Terminé ✓</b>':`${p.solved}/${ROOMS.length} salles`;
+    li.innerHTML=`<span class="mpName">${med}${p.name}${p.id===playerId?' (toi)':''}</span><span class="mpStatus">${status} · ${p.errors} erreur${p.errors>1?'s':''}</span>`;
+    ol.appendChild(li);
+  });
+  $('mpBoard').style.display=people.length?'block':'none';
+}
 async function endGame(){
   if(gameEnded)return;gameEnded=true;
   if(document.pointerLockElement)document.exitPointerLock();
@@ -1367,30 +1500,43 @@ async function endGame(){
   $('endTime').textContent=fmtTime(timeSec);$('endErrors').textContent=gameErrors;
   $('endWrap').classList.add('show');
   await pushProgress();
-  if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
-  const entry={name:playerName,timeSec:+timeSec.toFixed(1),errors:gameErrors,date:Date.now(),code:sessionCode||null};
-  const list=await saveScore(entry);
-  const scope=sessionCode?list.filter(e=>e.code===sessionCode):list;
-  const byTime=[...scope].sort((a,b)=>a.timeSec-b.timeSec||a.errors-b.errors);
-  const byErr=[...scope].sort((a,b)=>a.errors-b.errors||a.timeSec-b.timeSec);
-  $('lbTitle1').textContent=sessionCode?'⏱ Meilleurs temps — cette partie':'⏱ Meilleurs temps';
-  $('lbTitle2').textContent=sessionCode?"🎯 Moins d'erreurs — cette partie":"🎯 Moins d'erreurs";
-  renderLbTable('lbTime',byTime,entry);renderLbTable('lbErr',byErr,entry);
-  if(!hasStorage){$('lbTime').innerHTML='<li>Classement indisponible hors ligne</li>';$('lbErr').innerHTML='<li>Classement indisponible hors ligne</li>';}
+  if(sessionCode){
+    // la partie continue d'être publiée/reçue (pollTimer) pour que le classement ci-dessous se mette à jour
+    // en direct pendant que les autres joueurs terminent à leur tour.
+    $('lbTables').style.display='none';
+    renderMultiplayerBoard();
+    clearInterval(endGame._mpTimer);
+    endGame._mpTimer=setInterval(renderMultiplayerBoard,1500);
+  }else{
+    $('mpBoard').style.display='none';
+    if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
+    const entry={name:playerName,timeSec:+timeSec.toFixed(1),errors:gameErrors,date:Date.now(),code:sessionCode||null};
+    const list=await saveScore(entry);
+    const byTime=[...list].sort((a,b)=>a.timeSec-b.timeSec||a.errors-b.errors);
+    const byErr=[...list].sort((a,b)=>a.errors-b.errors||a.timeSec-b.timeSec);
+    $('lbTitle1').textContent='⏱ Meilleurs temps';
+    $('lbTitle2').textContent="🎯 Moins d'erreurs";
+    renderLbTable('lbTime',byTime,entry);renderLbTable('lbErr',byErr,entry);
+    if(!hasStorage){$('lbTime').innerHTML='<li>Classement indisponible hors ligne</li>';$('lbErr').innerHTML='<li>Classement indisponible hors ligne</li>';}
+  }
 }
-$('endClose').addEventListener('click',()=>{$('endWrap').classList.remove('show');riddleOpen=false;canvas.focus();});
+$('endClose').addEventListener('click',()=>{$('endWrap').classList.remove('show');riddleOpen=false;canvas.focus();clearInterval(endGame._mpTimer);});
 addEventListener('keydown',e=>{if(!started)return;const k=e.key.toLowerCase();
   if(riddleOpen){if(k==='escape')closeRiddle();return;}
   if(MOVE_KEYS[k]){if(!exploring){enterRoom(0);}fkeys[MOVE_KEYS[k]]=1;e.preventDefault();}
-  else if(k===' '){if(!exploring)enterRoom(0);e.preventDefault();}
-  else if(e.shiftKey&&freeMode){fkeys.sprint=1;}
-  else if(k==='e'&&freeMode&&activeNear){openRiddle(activeNear);}
-  else if(k==='arrowright'&&freeMode&&exploring){
+  else if(k===' '){
+    if(!exploring)enterRoom(0);
+    else if(freeMode&&jumpOffset<=0&&jumpVel===0){jumpVel=JUMP_VEL;}
     e.preventDefault();
-    if(!ROOMS[roomIdx].solved){showToast('La porte reste verrouillée : trouve d’abord la borne de cette salle (touche E).',3200);}
-    else enterRoom(roomIdx+1);
   }
-  else if(k==='arrowleft'&&freeMode&&exploring){e.preventDefault();enterRoom(roomIdx-1);}
+  else if(e.shiftKey&&freeMode){fkeys.sprint=1;}
+  else if(k==='e'&&freeMode){
+    if(activeNear)openRiddle(activeNear);
+    else if(activeDoor){
+      if(!ROOMS[roomIdx].solved)showToast('La porte reste verrouillée : trouve d’abord la borne de cette salle (touche E dessus).',3200);
+      else enterRoom(roomIdx+1);
+    }
+  }
   else if(k==='escape'&&freeMode){if(document.pointerLockElement)document.exitPointerLock();}
 });
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();
