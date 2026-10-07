@@ -1150,7 +1150,12 @@ function updateFree(dt){
     activeNear=near;$('interactPrompt').classList.toggle('show',!!near);
     // le corps ne se voit pas dans le vide étroit sous le faux plancher (on y rampe, accroupi)
     playerBody.visible=!underHole;
-    if(!underHole){playerBody.position.copy(camera.position);playerBody.rotation.y=yaw;}
+    if(!underHole){
+      // le corps est légèrement avancé par rapport aux yeux (comme un vrai corps), sinon il faut regarder
+      // presque à la verticale pour l'apercevoir — en le décalant vers l'avant, un simple coup d'œil vers le bas suffit
+      playerBody.position.copy(camera.position).addScaledVector(_fwd,.32);
+      playerBody.rotation.y=yaw;
+    }
   }else{playerBody.visible=false;}
 }
 document.addEventListener('pointerlockchange',()=>{pointerLocked=document.pointerLockElement===canvas;});
@@ -1223,12 +1228,12 @@ const hasStorage=typeof window.storage!=='undefined';
 // backend à héberger. Chaque joueur publie son état (retenu) sur un sujet propre à son code de partie, et
 // tous les joueurs du même code s'y abonnent : ça marche pareil en local, sur l'aperçu ou en ligne.
 const MQTT_WS_URL='wss://broker.hivemq.com:8884/mqtt';
-const MQTT_NS='dctour/v3';
+const MQTT_NS='dctour/v4';
 let playerId=Math.random().toString(36).slice(2,9);
 let mqttClient=null,mqttOnline=false,players={};
 /* avatars des autres joueurs, visibles en direct dans la scène (même mécanisme que le corps du joueur) */
 const remotePlayers={};
-function colorForId(id){let h=0;for(let i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))>>>0;return new T.Color(`hsl(${h%360},70%,55%)`).getHex();}
+function colorForId(id){let h=0;for(let i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))>>>0;return new T.Color().setHSL((h%360)/360,.7,.55).getHex();}
 function makeNameSprite(text){
   const [c,x]=cvs(256,64);
   x.font=`600 30px ${FB}`;x.textAlign='center';x.textBaseline='middle';
@@ -1320,7 +1325,7 @@ async function initSession(code){
         if(data.id!==playerId){
           let rp=remotePlayers[data.id];
           if(!rp){rp=remotePlayers[data.id]={grp:buildRemoteAvatar(data.id,data.name||'Joueur'),target:new V3(),yaw:0,yawTarget:0,show:false};scene.add(rp.grp);}
-          rp.name=data.name;rp.lastSeen=Date.now();rp.show=!!data.exploring;
+          rp.name=data.name;rp.lastSeen=Date.now();rp.show=data.exploring!==false;
           if(typeof data.x==='number'){rp.target.set(data.x,data.y,data.z);rp.yawTarget=data.yaw||0;
             if(!rp.placed){rp.grp.position.copy(rp.target);rp.yaw=rp.yawTarget;rp.placed=true;}}
         }
