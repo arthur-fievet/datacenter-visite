@@ -1547,6 +1547,10 @@ function buildRemoteAvatar(id,name){
   g.visible=false;scene.add(g);
   return g;
 }
+// sous le faux plancher, la silhouette (taille humaine normale) est bien trop grande pour le vide sanitaire
+// (à peine 55 cm sous plafond) : on la réduit pour qu'un autre joueur qui s'y trouve ait l'air d'y ramper
+// normalement plutôt que de paraître géant.
+const UNDER_AVATAR_SCALE=.4;
 function updateRemotePlayers(dt){
   const now=Date.now();
   for(const id in remotePlayers){
@@ -1557,6 +1561,9 @@ function updateRemotePlayers(dt){
       rp.grp.position.lerp(rp.target,Math.min(1,dt*8));
       let dy=rp.yawTarget-rp.yaw;while(dy>Math.PI)dy-=2*Math.PI;while(dy<-Math.PI)dy+=2*Math.PI;
       rp.yaw+=dy*Math.min(1,dt*8);rp.grp.rotation.y=rp.yaw;
+      const targetScale=rp.underfloor?UNDER_AVATAR_SCALE:1;
+      rp.scale+=(targetScale-rp.scale)*Math.min(1,dt*8);
+      rp.grp.scale.setScalar(rp.scale);
     }
   }
 }
@@ -1584,7 +1591,7 @@ function publishProgress(){
   if(!mqttClient||!mqttOnline||!sessionCode)return;
   const p=camera.position;
   const payload=JSON.stringify({id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded,
-    exploring,x:+p.x.toFixed(2),y:+p.y.toFixed(2),z:+p.z.toFixed(2),yaw:+yaw.toFixed(3),ts:Date.now()});
+    exploring,underfloor,x:+p.x.toFixed(2),y:+p.y.toFixed(2),z:+p.z.toFixed(2),yaw:+yaw.toFixed(3),ts:Date.now()});
   try{mqttClient.publish(`${MQTT_NS}/${sessionCode}/${playerId}`,payload,{retain:true,qos:0});}catch(e){}
 }
 async function pushProgress(){
@@ -1619,10 +1626,10 @@ async function initSession(code){
         players[data.id]={...data,ts:Date.now()};
         if(data.id!==playerId){
           let rp=remotePlayers[data.id];
-          if(!rp){rp=remotePlayers[data.id]={grp:buildRemoteAvatar(data.id,data.name||'Joueur'),target:new V3(),yaw:0,yawTarget:0,show:false};scene.add(rp.grp);}
-          rp.name=data.name;rp.lastSeen=Date.now();rp.show=data.exploring!==false;
+          if(!rp){rp=remotePlayers[data.id]={grp:buildRemoteAvatar(data.id,data.name||'Joueur'),target:new V3(),yaw:0,yawTarget:0,show:false,scale:1};scene.add(rp.grp);}
+          rp.name=data.name;rp.lastSeen=Date.now();rp.show=data.exploring!==false;rp.underfloor=!!data.underfloor;
           if(typeof data.x==='number'){rp.target.set(data.x,data.y,data.z);rp.yawTarget=data.yaw||0;
-            if(!rp.placed){rp.grp.position.copy(rp.target);rp.yaw=rp.yawTarget;rp.placed=true;}}
+            if(!rp.placed){rp.grp.position.copy(rp.target);rp.yaw=rp.yawTarget;rp.scale=rp.underfloor?UNDER_AVATAR_SCALE:1;rp.grp.scale.setScalar(rp.scale);rp.placed=true;}}
         }
         renderSessionLabel();
       }catch(e){}
