@@ -143,7 +143,7 @@ body.free #integrity{display:flex}
   <button class="nav" id="prev" aria-label="Étape précédente">‹</button>
   <button class="nav" id="next" aria-label="Étape suivante">›</button>
   <div id="reticle"></div>
-  <div id="freehint">Déplacement libre — <kbd>Z Q S D</kbd> marcher, souris pour regarder, <kbd>Espace</kbd>/<kbd>Maj</kbd> monter/descendre, <kbd>←</kbd>/<kbd>→</kbd> changer de salle</div>
+  <div id="freehint">Déplacement libre — <kbd>Z Q S D</kbd> marcher, souris pour regarder, <kbd>Maj</kbd> courir, <kbd>E</kbd> interagir, <kbd>←</kbd>/<kbd>→</kbd> changer de salle (une fois la borne trouvée)</div>
   <div id="explCount"></div>
   <div id="interactPrompt">Appuie sur <kbd>E</kbd> pour interagir</div>
   <div id="toast"></div>
@@ -607,6 +607,7 @@ const dustGeo=new T.BufferGeometry();{const n=1400,p=new Float32Array(n*3);for(l
 const dustMat=new T.ShaderMaterial({uniforms:{uTime:{value:0},uScale:{value:800}},vertexShader:`uniform float uTime;uniform float uScale;varying float vA;void main(){vec3 p=position;p.x+=sin(uTime*.07+p.y*2.)*.25;p.y+=sin(uTime*.05+p.x)*.15;p.z+=cos(uTime*.06+p.x*1.3)*.25;vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;vA=clamp(1.-(-mv.z)/9.,0.,1.);gl_PointSize=clamp(uScale*.004/-mv.z,1.,4.);}`,fragmentShader:`varying float vA;void main(){float d=length(gl_PointCoord-.5);gl_FragColor=vec4(vec3(.8,.85,.9)*vA*.35*smoothstep(.5,0.,d),1.);}`,transparent:true,depthWrite:false,blending:T.AdditiveBlending});
 scene.add(new T.Points(dustGeo,dustMat));
 
+const secDoors=[]; // portes vitrées coulissantes du sas d'accueil, animées à l'approche (voir updateDoors)
 /* ================================================================ ZONE: SECURITY (S) */
 setStatus("Installation du contrôle d'accès…");await tick();
 const S=new V3(0,0,120);
@@ -625,7 +626,17 @@ const S=new V3(0,0,120);
     const dl=add(new T.CircleGeometry(.12,24),basic({color:hdr(0xffffff,5)}),S.x+bx,2.285,S.z-3);dl.rotation.x=Math.PI/2;
     for(const a of [.6,-.6,Math.PI-.6,Math.PI+.6]){cyl(.012,.012,2.3,6,M.alu,S.x+bx+Math.sin(a)*.552,1.15,S.z-3+Math.cos(a)*.552);}
     // badge reader + biometric
-    boxAt(.09,.14,.03,M.glossBlack,S.x+bx+(bx<0?-.72:.72)*.0+ (bx<0?-.93:.93)*0,1.2,S.z-2.83);
+    boxAt(.09,.14,.03,M.glossBlack,S.x+bx+(bx<0?-.72:.93)*0,1.2,S.z-2.83);
+    // porte vitrée coulissante du sas, côté arrivée du joueur : se détecte et s'ouvre (glisse vers le haut) à l'approche
+    {
+      const doorMat=std({color:0xbfe0f0,roughness:.05,metalness:.05,transparent:true,opacity:.24,depthWrite:false,side:T.DoubleSide,envMapIntensity:2.2});
+      const cx=S.x+bx,cz=S.z-3+.552,baseY=1.12;
+      const dg=new T.Group();dg.position.set(cx,baseY,cz);scene.add(dg);
+      plane(.78,2.08,doorMat,0,0,0,0,dg);
+      boxAt(.035,2.1,.035,M.alu,-.39,0,.012,dg);boxAt(.035,2.1,.035,M.alu,.39,0,.012,dg);
+      boxAt(.82,.05,.05,M.alu,0,1.06,.012,dg);
+      secDoors.push({grp:dg,cx,cz,baseY});
+    }
   }
   const ring=textTex(128,192,(x)=>{x.fillStyle='#000';x.fillRect(0,0,128,192);x.strokeStyle='#3aa0ff';x.lineWidth=7;x.beginPath();x.arc(64,80,34,0,6.283);x.stroke();x.fillStyle='#bfe0ff';x.fillRect(46,150,36,6);});
   for(const bx of [-1.62,1.62]){boxAt(.1,.16,.03,M.glossBlack,S.x+bx,1.25,S.z-2.83);plane(.09,.135,basic({map:ring,color:hdr(0xffffff,2.5)}),S.x+bx,1.25,S.z-2.813);}
@@ -1083,22 +1094,33 @@ function goTo(j){
   cur=j;
 }
 /* ---------------------------------------------------------------- limites de déplacement (murs/sol réels) */
-let underfloor=false;
 function clampToZone(zone){
+  // on ne gère plus que le sol et les murs (X/Z) : la hauteur des yeux est gérée par la gravité dans updateFree
   const b=ZONE_BOUNDS[zone];if(!b)return;const p=camera.position;
   p.x=Math.max(b.x0,Math.min(b.x1,p.x));p.z=Math.max(b.z0,Math.min(b.z1,p.z));
-  if(b.hole){
-    const h=b.hole,inHole=p.x>=h.x0-.4&&p.x<=h.x1+.4&&p.z>=h.z0-.4&&p.z<=h.z1+.4;
-    if(!underfloor&&!inHole&&p.y<b.y0)p.y=b.y0;
-    if(p.y<h.under)p.y=h.under;
-    if(p.y>b.y1)p.y=b.y1;
-    underfloor=p.y<b.y0-.05;
-  }else{p.y=Math.max(b.y0,Math.min(b.y1,p.y));}
 }
+// hauteur d'yeux « debout » standard et hauteur « accroupi » sous le faux plancher : plus aucun vol libre,
+// on marche au sol comme une personne, et on se baisse automatiquement au-dessus de la trappe.
+const STAND_EYE=1.65,UNDER_EYE=-.3;
+function inHoleXZ(p){const h=ZONE_BOUNDS.hall.hole;return p.x>=h.x0-.4&&p.x<=h.x1+.4&&p.z>=h.z0-.4&&p.z<=h.z1+.4;}
 /* ---------------------------------------------------------------- free-roam + salles + énigmes */
 let freeMode=false,pointerLocked=false,yaw=0,pitch=0,exploring=false,roomIdx=-1,riddleOpen=false,activeNear=null;
-const fkeys={f:0,b:0,l:0,r:0,u:0,d:0,sprint:0};const _fwd=new V3(),_rgt=new V3(),_mv=new V3();const _feu=new T.Euler(0,0,0,'YXZ');
+const fkeys={f:0,b:0,l:0,r:0,sprint:0};const _fwd=new V3(),_rgt=new V3(),_mv=new V3();const _feu=new T.Euler(0,0,0,'YXZ');
 const HUD_HIDE_IDS=['cap','prog','prev','next','keys','tag','count'];
+// avatar simple (jambes + bas du corps) : visible en vue libre, aligné sur le lacet de la caméra (pas le tangage,
+// sinon le corps basculerait quand on regarde en haut/bas) ; on le voit en baissant les yeux, comme une vraie personne.
+function buildBody(){
+  // offsets relatifs à la hauteur des yeux (gabarit adulte standard : hanches ≈ 0,9 m, pieds ≈ sol)
+  const g=new T.Group();
+  const cloth=std({color:0x30343b,roughness:.85,metalness:.05}),shoe=std({color:0x15161a,roughness:.5,metalness:.1});
+  boxAt(.36,.24,.24,cloth,0,-.75,0,g);
+  for(const side of [-1,1]){
+    boxAt(.16,.8,.16,cloth,side*.1,-1.15,0,g);
+    boxAt(.17,.09,.27,shoe,side*.1,-1.58,-.08,g);
+  }
+  g.visible=false;scene.add(g);return g;
+}
+const playerBody=buildBody();
 function enterFree(){
   anim=null;fadeEl.style.opacity=0;
   if(!freeMode){freeMode=true;document.body.classList.add('free');HUD_HIDE_IDS.forEach(id=>{const el=$(id);if(el)el.style.display='none';});}
@@ -1107,17 +1129,26 @@ function enterFree(){
 function updateFree(dt){
   if(riddleOpen)return;
   _feu.set(pitch,yaw,0,'YXZ');camera.quaternion.setFromEuler(_feu);
-  _fwd.set(0,0,-1).applyQuaternion(camera.quaternion);_rgt.set(1,0,0).applyQuaternion(camera.quaternion);
-  const spd=(fkeys.sprint?7.5:3.1)*dt;_mv.set(0,0,0);
+  // avance horizontale uniquement : regarder en haut/bas ne doit pas faire décoller ou plonger — on marche, on ne vole pas
+  _fwd.set(0,0,-1).applyAxisAngle(new V3(0,1,0),yaw);_rgt.set(1,0,0).applyAxisAngle(new V3(0,1,0),yaw);
+  const spd=(fkeys.sprint?6.2:3.1)*dt;_mv.set(0,0,0);
   if(fkeys.f)_mv.add(_fwd);if(fkeys.b)_mv.sub(_fwd);if(fkeys.r)_mv.add(_rgt);if(fkeys.l)_mv.sub(_rgt);
-  if(fkeys.u)_mv.y+=1;if(fkeys.d)_mv.y-=1;
-  if(_mv.lengthSq()>1e-6){_mv.normalize().multiplyScalar(spd);camera.position.add(_mv);}
-  if(exploring&&roomIdx>=0){const z=ROOMS[roomIdx].zone;clampToZone(z);if(z==='hall'&&camera.position.y>-.3)resolveRowCollision(camera.position);}
+  if(_mv.lengthSq()>1e-6){_mv.normalize().multiplyScalar(spd);camera.position.x+=_mv.x;camera.position.z+=_mv.z;}
   if(exploring&&roomIdx>=0){
+    const z=ROOMS[roomIdx].zone;clampToZone(z);
+    const underHole=z==='hall'&&inHoleXZ(camera.position);
+    if(z==='hall'&&!underHole)resolveRowCollision(camera.position);
+    // gravité : on se cale automatiquement sur la hauteur du sol (debout), et on se baisse tout seul au-dessus de la trappe —
+    // comme des marches, pas comme un ascenseur libre
+    const targetY=underHole?UNDER_EYE:STAND_EYE;
+    camera.position.y+=(targetY-camera.position.y)*Math.min(1,dt*6);
     const r=ROOMS[roomIdx];
     const near=!r.solved&&camera.position.distanceTo(r.rpos)<2.4?r:null;
     activeNear=near;$('interactPrompt').classList.toggle('show',!!near);
-  }
+    // le corps ne se voit pas dans le vide étroit sous le faux plancher (on y rampe, accroupi)
+    playerBody.visible=!underHole;
+    if(!underHole){playerBody.position.copy(camera.position);playerBody.rotation.y=yaw;}
+  }else{playerBody.visible=false;}
 }
 document.addEventListener('pointerlockchange',()=>{pointerLocked=document.pointerLockElement===canvas;});
 addEventListener('mousemove',e=>{if(!pointerLocked||!freeMode||riddleOpen)return;yaw-=e.movementX*0.00225;pitch-=e.movementY*0.00225;pitch=Math.max(-1.5,Math.min(1.5,pitch));});
@@ -1138,7 +1169,7 @@ function enterRoom(i){
   ROOMS.forEach(x=>{x.marker.grp.visible=false;});
   roomIdx=i;exploring=true;const r=ROOMS[i];r.marker.grp.visible=true;
   if(document.pointerLockElement)document.exitPointerLock();
-  fkeys.f=fkeys.b=fkeys.l=fkeys.r=fkeys.u=fkeys.d=0;
+  fkeys.f=fkeys.b=fkeys.l=fkeys.r=fkeys.sprint=0;
   fadeEl.style.opacity=1;
   setTimeout(()=>{
     applyZone(r.zone);camera.position.copy(r.pos);look.copy(r.tgt);camera.lookAt(look);
@@ -1148,7 +1179,7 @@ function enterRoom(i){
   },620);
 }
 function openRiddle(r){
-  riddleOpen=true;fkeys.f=fkeys.b=fkeys.l=fkeys.r=fkeys.u=fkeys.d=0;
+  riddleOpen=true;fkeys.f=fkeys.b=fkeys.l=fkeys.r=fkeys.sprint=0;
   if(document.pointerLockElement)document.exitPointerLock();
   document.documentElement.style.setProperty('--accent',r.accent);
   $('mRoom').textContent=r.room;
@@ -1169,7 +1200,8 @@ function openRiddle(r){
       if(i===r.correct){
         b.classList.add('right');
         if(!r.solved){r.solved=true;r.marker.mat.emissiveIntensity=.3;updateExplCount();updateIntegrity();pushProgress();
-          if(ROOMS.every(x=>x.solved))setTimeout(endGame,900);}
+          if(ROOMS.every(x=>x.solved))setTimeout(endGame,900);
+          else setTimeout(()=>showToast('Bien joué ! La porte vers la salle suivante est déverrouillée (→).',4000),400);}
       }else{b.classList.add('wrong');cho.children[r.correct].classList.add('right');if(!r.solved){gameErrors++;pushProgress();}}
       factEl.classList.add('show');closeBtn.classList.add('show');
     });
@@ -1290,19 +1322,32 @@ $('endClose').addEventListener('click',()=>{$('endWrap').classList.remove('show'
 addEventListener('keydown',e=>{if(!started)return;const k=e.key.toLowerCase();
   if(riddleOpen){if(k==='escape')closeRiddle();return;}
   if(MOVE_KEYS[k]){if(!exploring){enterRoom(0);}fkeys[MOVE_KEYS[k]]=1;e.preventDefault();}
-  else if(k===' '){if(!exploring)enterRoom(0);fkeys.u=1;e.preventDefault();}
-  else if(e.shiftKey&&freeMode){fkeys.d=1;}
+  else if(k===' '){if(!exploring)enterRoom(0);e.preventDefault();}
+  else if(e.shiftKey&&freeMode){fkeys.sprint=1;}
   else if(k==='e'&&freeMode&&activeNear){openRiddle(activeNear);}
-  else if(k==='arrowright'&&freeMode&&exploring){e.preventDefault();enterRoom(roomIdx+1);}
+  else if(k==='arrowright'&&freeMode&&exploring){
+    e.preventDefault();
+    if(!ROOMS[roomIdx].solved){showToast('La porte reste verrouillée : trouve d’abord la borne de cette salle (touche E).',3200);}
+    else enterRoom(roomIdx+1);
+  }
   else if(k==='arrowleft'&&freeMode&&exploring){e.preventDefault();enterRoom(roomIdx-1);}
   else if(k==='escape'&&freeMode){if(document.pointerLockElement)document.exitPointerLock();}
 });
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();
   if(MOVE_KEYS[k])fkeys[MOVE_KEYS[k]]=0;
-  if(k===' ')fkeys.u=0;
-  if(k==='shift')fkeys.d=0;
+  if(k==='shift')fkeys.sprint=0;
 });
+function updateDoors(dt){
+  const p=camera.position;
+  for(const d of secDoors){
+    const dist=Math.hypot(p.x-d.cx,p.z-d.cz);
+    const open=dist<1.35;
+    const targetY=d.baseY+(open?2.15:0);
+    d.grp.position.y+=(targetY-d.grp.position.y)*Math.min(1,dt*5);
+  }
+}
 function frame(now,dt){
+  updateDoors(dt);
   if(freeMode){updateFree(dt);return;}
   if(anim&&anim.type==='fly'){
     const p=Math.min(1,(now-anim.t0)/anim.dur),e=ease(p);
