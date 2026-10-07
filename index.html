@@ -839,6 +839,47 @@ const ZONE_BOUNDS={
  noc:{x0:N.x-5.8,x1:N.x+5.8,z0:N.z-4.3,z1:N.z+4.3,y0:0,y1:3.1},
  ext:{x0:E.x-75,x1:E.x+75,z0:E.z-75,z1:E.z+75,y0:0,y1:40},
 };
+// collision contre le mobilier volumineux de chaque salle (racks, baies, pupitres, onduleurs…), pour ne plus
+// pouvoir passer à travers en marchant droit dessus — avant ça, seule la limite extérieure de chaque zone
+// bloquait le joueur, et tout le mobilier à l'intérieur était traversable.
+const ZONE_OBSTACLES={
+  sec:[ // les trois piliers qui encadrent les deux sas (les cylindres vitrés eux-mêmes ne sont pas bloqués :
+        // on doit pouvoir y entrer par leur porte coulissante)
+    {x0:S.x-1.625-.375,x1:S.x-1.625+.375,z0:S.z-3.15,z1:S.z-2.85},
+    {x0:S.x+1.625-.375,x1:S.x+1.625+.375,z0:S.z-3.15,z1:S.z-2.85},
+    {x0:S.x-.15,x1:S.x+.15,z0:S.z-3.15,z1:S.z-2.85},
+  ],
+  hall:[ // rangées de baies déjà gérées par ROW_BOXES ; ici le mobilier mural manquant
+    ...[-6,-2.5,1,4.5].map(z=>({x0:-10,x1:-9.1,z0:z-.9,z1:z+.9})), // unités de climatisation (mur ouest)
+    ...[-4,3].map(z=>({x0:8.15,x1:8.65,z0:z-.25,z1:z+.25})), // colonnes porteuses
+    {x0:5.0,x1:7.8,z0:-10.85,z1:-10.45}, // bouteilles d'extinction
+  ],
+  mmr:[
+    {x0:MM.x-3.0,x1:MM.x+3.0,z0:-2.4,z1:-1.2}, // rangée de baies fibre
+    {x0:MM.x-5.1,x1:MM.x-2.7,z0:-4.95,z1:-3.75}, // baies opérateur A
+    {x0:MM.x-1.2,x1:MM.x+1.2,z0:-4.95,z1:-3.75}, // baies opérateur B
+    {x0:MM.x+2.7,x1:MM.x+5.1,z0:-4.95,z1:-3.75}, // baies opérateur C
+  ],
+  pwr:[
+    {x0:P.x-5.4,x1:P.x-0.5,z0:-2.35,z1:-1.45}, // rangée d'onduleurs
+    {x0:P.x-5.34,x1:P.x-0.46,z0:1.5,z1:2.3}, // rangée de batteries
+    {x0:P.x-7.98,x1:P.x-7.38,z0:-2.39,z1:2.39}, // tableaux TGBT (mur ouest)
+  ],
+  noc:[
+    {x0:N.x-4.5,x1:N.x+4.5,z0:N.z-1.125,z1:N.z-0.275}, // premier rang de pupitres
+    {x0:N.x-4.5,x1:N.x+4.5,z0:N.z+1.475,z1:N.z+2.325}, // second rang, sur l'estrade
+  ],
+};
+function resolveObstacles(p,zone){
+  const list=ZONE_OBSTACLES[zone];if(!list)return;
+  for(const b of list){
+    if(p.x>b.x0&&p.x<b.x1&&p.z>b.z0&&p.z<b.z1){
+      const dx0=p.x-b.x0,dx1=b.x1-p.x,dz0=p.z-b.z0,dz1=b.z1-p.z;
+      const m=Math.min(dx0,dx1,dz0,dz1);
+      if(m===dx0)p.x=b.x0-.05;else if(m===dx1)p.x=b.x1+.05;else if(m===dz0)p.z=b.z0-.05;else p.z=b.z1+.05;
+    }
+  }
+}
 {
   // rayon volontairement limité (pas un disque à perte de vue) : les zones intérieures sont à 300+ unités de
   // distance (sec, salle informatique, meet-me room, local onduleurs…) — un disque trop grand passe dessous et
@@ -1087,7 +1128,9 @@ function wallGapZ(totalD,H,mat,cx,cy,cz,rotY,gapCz,gapW,gapH){
 function buildWallDoor(cx,cz,rotY,gapW,gapH,wallHalfW){
   const dir=new V3(Math.sin(rotY),0,Math.cos(rotY)),perp=new V3(-dir.z,0,dir.x);
   const tg=new T.Group();tg.position.set(cx,0,cz);tg.rotation.y=rotY;scene.add(tg);
-  const doorMat=std({color:0xbfe0f0,roughness:.05,metalness:.05,transparent:true,opacity:.24,depthWrite:false,side:T.DoubleSide,envMapIntensity:2.2});
+  // verre dépoli (pas transparent) : une porte de salle technique à badge est opaque — et ça évite de voir au
+  // travers vers ce qu'il y a de l'autre côté, qui n'est pas censé être visible avant de l'avoir franchie
+  const doorMat=std({color:0xcfd6dc,roughness:.55,metalness:.08,side:T.DoubleSide});
   const leafW=gapW-.08,leafH=gapH-.04,closedY=leafH/2+.02;
   const lg=new T.Group();lg.position.set(0,closedY,0);tg.add(lg);
   plane(leafW,leafH,doorMat,0,0,0,0,lg);
@@ -1098,7 +1141,7 @@ function buildWallDoor(cx,cz,rotY,gapW,gapH,wallHalfW){
   const ledMat=basic({color:hdr(0xff4a3c,3)});
   plane(.05,.05,ledMat,leafW/2-.1,-.25,.047,0,lg);
   const doorObj={tg,leaves:[{grp:lg,closedY,ledMat}],pos:new V3(cx,0,cz),cx,cz,gapW,wallHalfW,
-    openDist:2.4,locked:true,dir,perp};
+    openDist:3.2,locked:true,dir,perp};
   doorObj.setUnlocked=(u)=>{
     if(doorObj.locked===!u)return;doorObj.locked=!u;
     ledMat.color.copy(hdr(u?0x3be06a:0xff4a3c,3));
@@ -1144,6 +1187,23 @@ ROOMS.forEach((r,idx)=>{
     dir.applyAxisAngle(new V3(0,1,0),turn);
     const dist=Math.max(2.4,Math.min(4.6,r.pos.distanceTo(r.tgt)*.55+1.6));
     r.rpos=r.pos.clone().addScaledVector(dir,dist);
+  }
+  // la borne ne doit jamais apparaître pile dans l'axe du regard au moment où on arrive dans la salle (sinon
+  // elle « saute » dans la figure dès le spawn) : si elle est trop proche de la direction initiale, on la
+  // fait pivoter sur le côté, à la même distance. Non applicable à NOC (position choisie à la main pour éviter
+  // l'estrade) ni aux salles de la salle informatique (déjà placées dans une allée dégagée, pas sur l'axe du
+  // regard).
+  if(r.zone!=='noc'&&!isHallFloor){
+    const toMarker=r.rpos.clone().sub(r.pos);toMarker.y=0;
+    const lookDir=r.tgt.clone().sub(r.pos);lookDir.y=0;
+    if(toMarker.lengthSq()>1e-6&&lookDir.lengthSq()>1e-6){
+      const dist0=toMarker.length();toMarker.normalize();lookDir.normalize();
+      if(toMarker.dot(lookDir)>.55){
+        const side=(idx%2===0)?1:-1;
+        const rotated=lookDir.clone().applyAxisAngle(new V3(0,1,0),side*1.15);
+        r.rpos=r.pos.clone().addScaledVector(rotated,dist0);
+      }
+    }
   }
   r.rpos.y=r.pos.y<.2?Math.max(-.55,r.pos.y+.15):0;
   const zb=ZONE_BOUNDS[r.zone];
@@ -1239,7 +1299,10 @@ function updateFree(dt){
   _feu.set(pitch,yaw,0,'YXZ');camera.quaternion.setFromEuler(_feu);
   // avance horizontale uniquement : regarder en haut/bas ne doit pas faire décoller ou plonger — on marche, on ne vole pas
   _fwd.set(0,0,-1).applyAxisAngle(new V3(0,1,0),yaw);_rgt.set(1,0,0).applyAxisAngle(new V3(0,1,0),yaw);
-  const spd=(fkeys.sprint?6.2:3.1)*dt;_mv.set(0,0,0);
+  // sous le faux plancher on est accroupi dans un espace exigu : on ne sprinte pas là-dedans, et on avance
+  // nettement plus lentement que debout (avant ça, la même vitesse qu'en marche normale, vue de si près du
+  // sol, donnait l'impression de courir à toute vitesse)
+  const spd=(underfloor?2:(fkeys.sprint?6.2:3.1))*dt;_mv.set(0,0,0);
   if(fkeys.f)_mv.add(_fwd);if(fkeys.b)_mv.sub(_fwd);if(fkeys.r)_mv.add(_rgt);if(fkeys.l)_mv.sub(_rgt);
   if(_mv.lengthSq()>1e-6){_mv.normalize().multiplyScalar(spd);camera.position.x+=_mv.x;camera.position.z+=_mv.z;}
   if(exploring&&roomIdx>=0){
@@ -1250,6 +1313,7 @@ function updateFree(dt){
       holeInsidePrev=insideHole;
     }else{underfloor=false;holeInsidePrev=false;}
     if(z==='hall'&&!underfloor)resolveRowCollision(camera.position);
+    if(!underfloor)resolveObstacles(camera.position,z);
     // gravité : on se cale automatiquement sur la hauteur du sol (debout), et on se baisse tout seul au-dessus de la trappe —
     // comme des marches, pas comme un ascenseur libre. Le saut ajoute une impulsion par-dessus cette hauteur de sol.
     const targetY=underfloor?UNDER_EYE:STAND_EYE;
@@ -1642,7 +1706,9 @@ function updateDoors(dt){
     const open=!d.locked&&dist<d.openDist;
     for(const leaf of d.leaves){
       const targetY=leaf.closedY+(open?2.1:0);
-      leaf.grp.position.y+=(targetY-leaf.grp.position.y)*Math.min(1,dt*5);
+      // plus rapide que les portes vitrées du mantrap : avec une zone de détection courte (openDist), une
+      // porte qui glisse trop lentement reste encore entrouverte quand on l'atteint à pied
+      leaf.grp.position.y+=(targetY-leaf.grp.position.y)*Math.min(1,dt*9);
     }
   }
 }
