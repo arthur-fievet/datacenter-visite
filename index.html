@@ -1055,38 +1055,50 @@ function buildRiddleMarker(r){
   const floorLite=new T.PointLight(new T.Color(r.accent).getHex(),.15,.9,2);floorLite.position.set(0,.1,0);grp.add(floorLite);
   return {grp,mat:screenMat,light:lite};
 }
-// porte physique vers la salle suivante : même langage visuel que les vraies portes déjà présentes dans le
-// bâtiment (vitre teintée + cadre alu du sas d'accueil et des allées froides) — pas un portail inventé. Elle
-// coulisse vers le haut à l'approche, comme les autres, mais seulement une fois la salle résolue ; sinon elle
-// reste fermée et son voyant de contrôle d'accès reste rouge (comme un vrai lecteur de badge).
+// vraie liaison physique entre deux salles : un petit sas fermé (murs + plafond, comme un vrai couloir de
+// jonction entre deux pièces d'un bâtiment technique) avec une porte vitrée coulissante à chaque bout — pas
+// une porte posée toute seule au milieu du vide. On entre par la première porte, on marche dans le sas, on
+// ressort par la seconde : les deux salles « communiquent » vraiment, comme demandé. Ancré sur le point de vue
+// d'arrivée de la salle (r.pos) et la direction du regard (r.tgt), c'est-à-dire le chemin déjà validé par la
+// caméra cinématique, pour être sûr de tomber dans un passage dégagé plutôt qu'au hasard dans une autre allée.
+const TUNNEL_LEN=2.6,TUNNEL_W=1.3,TUNNEL_H=2.3;
 function buildDoor(r,idx){
-  // ancrée sur le point de vue d'arrivée de la salle (r.pos) et la direction du regard (r.tgt) : c'est le
-  // chemin que la caméra cinématique suit déjà sans jamais traverser un mur ou une baie, donc une bonne
-  // garantie que la porte tombe dans un passage dégagé et proche de là où on arrive — pas au hasard à
-  // plusieurs mètres dans une autre allée (c'est ce qui faisait « disparaître » la porte de certaines salles).
   const dir=r.tgt.clone().sub(r.pos);dir.y=0;if(dir.lengthSq()<1e-6)dir.set(0,0,-1);dir.normalize();
   const ang=Math.atan2(dir.x,dir.z);
   const dist=Math.max(1.8,Math.min(3,r.pos.distanceTo(r.tgt)*.5));
   const pos=new V3(r.pos.x,0,r.pos.z).addScaledVector(dir,dist);
   const zb=ZONE_BOUNDS[r.zone];
-  if(zb){pos.x=Math.max(zb.x0+.7,Math.min(zb.x1-.7,pos.x));pos.z=Math.max(zb.z0+.7,Math.min(zb.z1-.7,pos.z));}
+  if(zb){pos.x=Math.max(zb.x0+.7,Math.min(zb.x1-(TUNNEL_LEN+.7),pos.x));pos.z=Math.max(zb.z0+.7,Math.min(zb.z1-(TUNNEL_LEN+.7),pos.z));}
   pos.y=r.pos.y<.2?Math.max(-.55,r.pos.y+.15):0;
   if(r.zone==='hall'&&pos.y>-.3)resolveRowCollision(pos);
-  const baseY=pos.y+1.04;
-  const dg=new T.Group();dg.position.set(pos.x,baseY,pos.z);dg.rotation.y=ang;scene.add(dg);
+  const tg=new T.Group();tg.position.copy(pos);tg.rotation.y=ang;scene.add(tg);
   const doorMat=std({color:0xbfe0f0,roughness:.05,metalness:.05,transparent:true,opacity:.24,depthWrite:false,side:T.DoubleSide,envMapIntensity:2.2});
-  plane(.92,2.08,doorMat,0,0,0,0,dg);
-  boxAt(.035,2.1,.035,M.alu,-.47,0,.012,dg);boxAt(.035,2.1,.035,M.alu,.47,0,.012,dg);
-  boxAt(.98,.05,.05,M.alu,0,1.06,.012,dg);
-  // lecteur de badge + voyant d'accès (petit détail réaliste, pas un grand aplat de couleur)
-  boxAt(.08,.12,.03,M.glossBlack,.56,.08,.02,dg);
-  const ledMat=basic({color:hdr(0xff4a3c,3)});
-  plane(.05,.05,ledMat,.56,.08,.037,0,dg);
-  dg.visible=false;
-  const doorObj={grp:dg,pos,cx:pos.x,cz:pos.z,baseY,locked:true,dir:dir.clone(),perp:new V3(-dir.z,0,dir.x)};
+  const closedY=1.04;
+  function buildLeaf(z,withReader){
+    const lg=new T.Group();lg.position.set(0,closedY,z);tg.add(lg);
+    plane(.92,2.08,doorMat,0,0,0,0,lg);
+    boxAt(.035,2.1,.035,M.alu,-.47,0,.012,lg);boxAt(.035,2.1,.035,M.alu,.47,0,.012,lg);
+    boxAt(.98,.05,.05,M.alu,0,1.06,.012,lg);
+    let ledMat=null;
+    if(withReader){
+      // lecteur de badge + voyant d'accès (petit détail réaliste, pas un grand aplat de couleur)
+      boxAt(.08,.12,.03,M.glossBlack,.56,.08,.02,lg);
+      ledMat=basic({color:hdr(0xff4a3c,3)});
+      plane(.05,.05,ledMat,.56,.08,.037,0,lg);
+    }
+    return {grp:lg,closedY,ledMat};
+  }
+  const leaf1=buildLeaf(0,true),leaf2=buildLeaf(TUNNEL_LEN,false);
+  // murs latéraux + plafond du sas, pour que ce soit un vrai petit couloir fermé et pas une porte posée dans le vide
+  const wallM=std({color:0xd7dadd,roughness:.85});
+  for(const side of [-1,1])boxAt(.08,TUNNEL_H,TUNNEL_LEN-.3,wallM,side*(TUNNEL_W/2),TUNNEL_H/2,TUNNEL_LEN/2,tg);
+  boxAt(TUNNEL_W,.08,TUNNEL_LEN-.3,wallM,0,TUNNEL_H,TUNNEL_LEN/2,tg);
+  tg.visible=false;
+  const doorObj={tg,leaves:[leaf1,leaf2],pos,cx:pos.x+dir.x*(TUNNEL_LEN/2),cz:pos.z+dir.z*(TUNNEL_LEN/2),
+    openDist:TUNNEL_LEN/2+1.7,passLen:TUNNEL_LEN+.3,locked:true,dir:dir.clone(),perp:new V3(-dir.z,0,dir.x)};
   doorObj.setUnlocked=(u)=>{
     if(doorObj.locked===!u)return;doorObj.locked=!u;
-    ledMat.color.copy(hdr(u?0x3be06a:0xff4a3c,3));
+    leaf1.ledMat.color.copy(hdr(u?0x3be06a:0xff4a3c,3));
   };
   return doorObj;
 }
@@ -1233,22 +1245,28 @@ function updateFree(dt){
     const r=ROOMS[roomIdx];
     const near=!r.solved&&camera.position.distanceTo(r.rpos)<2.4?r:null;
     activeNear=near;
-    // porte vers la salle suivante : pas de touche à presser pour « passer » — la porte s'ouvre toute seule à
-    // l'approche une fois la salle résolue, et c'est en marchant à travers (comme une vraie porte) qu'on
-    // rejoint la salle suivante. Si elle est encore verrouillée, on bute dessus comme sur un battant fermé.
+    // porte vers la salle suivante : un vrai petit sas à deux portes relie les salles. Pas de touche à presser
+    // pour « passer » — les deux portes s'ouvrent toutes seules à l'approche une fois la salle résolue, et
+    // c'est en marchant à travers le sas (comme un vrai couloir) qu'on rejoint la salle suivante. Si c'est
+    // encore verrouillé, la première porte bute comme un vrai battant fermé, et les murs du sas empêchent de
+    // passer à côté.
     const door=doors[roomIdx];
     let doorNear=null;
     if(door){
       door.setUnlocked(r.solved);
       const rel=_v1.copy(camera.position).sub(door.pos);
       const s=rel.dot(door.dir),lateral=rel.dot(door.perp);
-      if(Math.abs(lateral)<.55&&Math.abs(s)<2.3)doorNear=door;
-      if(!door.locked&&Math.abs(lateral)<.5&&door._lastS!==undefined&&door._lastS<0&&s>=0){
+      if(Math.abs(lateral)<.55&&s>-2.3&&s<door.passLen+1)doorNear=door;
+      if(!door.locked&&door._lastS!==undefined&&door._lastS<door.passLen&&s>=door.passLen){
         enterRoom(roomIdx+1);
         return;
       }else if(door.locked&&Math.abs(lateral)<.42&&s>-.16&&s<.16){
         camera.position.addScaledVector(door.dir,-.16-s);
         showToast('La porte reste verrouillée : trouve d’abord la borne 🧩 de cette salle.',2600);
+      }else if(s>.1&&s<TUNNEL_LEN-.1&&Math.abs(lateral)>TUNNEL_W/2-.22){
+        // murs du sas : on ne peut pas passer à travers en coupant par le côté
+        const clampLat=Math.sign(lateral)*(TUNNEL_W/2-.22);
+        camera.position.addScaledVector(door.perp,clampLat-lateral);
       }
       door._lastS=s;
     }
@@ -1284,9 +1302,9 @@ function enterRoom(i){
   if(i<0||i>=ROOMS.length)return;
   if(roomIdx<0&&i===0)gameStartTime=Date.now();
   ROOMS.forEach(x=>{x.marker.grp.visible=false;});
-  doors.forEach(d=>{if(d)d.grp.visible=false;});
+  doors.forEach(d=>{if(d)d.tg.visible=false;});
   roomIdx=i;exploring=true;const r=ROOMS[i];r.marker.grp.visible=true;
-  if(doors[i])doors[i].grp.visible=true;
+  if(doors[i])doors[i].tg.visible=true;
   if(document.pointerLockElement)document.exitPointerLock();
   fkeys.f=fkeys.b=fkeys.l=fkeys.r=fkeys.sprint=0;
   fadeEl.style.opacity=1;
@@ -1595,13 +1613,16 @@ function updateDoors(dt){
     d.grp.position.y+=(targetY-d.grp.position.y)*Math.min(1,dt*5);
   }
   // portes de salle : même mécanique de coulissement que les portes vitrées ci-dessus, mais verrouillées
-  // (elles restent fermées) tant que la borne de la salle n'est pas résolue.
+  // (elles restent fermées) tant que la borne de la salle n'est pas résolue — les deux battants du sas
+  // s'ouvrent ensemble.
   for(const d of doors){
-    if(!d||!d.grp.visible)continue;
+    if(!d||!d.tg.visible)continue;
     const dist=Math.hypot(p.x-d.cx,p.z-d.cz);
-    const open=!d.locked&&dist<1.6;
-    const targetY=d.baseY+(open?2.1:0);
-    d.grp.position.y+=(targetY-d.grp.position.y)*Math.min(1,dt*5);
+    const open=!d.locked&&dist<d.openDist;
+    for(const leaf of d.leaves){
+      const targetY=leaf.closedY+(open?2.1:0);
+      leaf.grp.position.y+=(targetY-leaf.grp.position.y)*Math.min(1,dt*5);
+    }
   }
 }
 function frame(now,dt){
