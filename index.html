@@ -601,9 +601,8 @@ for(const a of coldAisles){
   // painted wall title
   const wt=textTex(1024,256,(x)=>{x.clearRect(0,0,1024,256);x.fillStyle='rgba(30,34,40,.88)';x.font=`700 190px ${FC}`;x.fillText('SALLE IT-01',20,200);});
   plane(4,1,std({map:wt,transparent:true,roughness:.9}),HX0+.02,3.5,-.6,Math.PI/2);
-  // exit door + sign (west wall)
-  boxAt(.06,2.2,1.4,std({color:0x6d747b,roughness:.5,metalness:.6}),HX0+.03,1.1,-9.4);
-  boxAt(.08,.04,.5,M.steel,HX0+.07,1.05,-9.2);
+  // exit sign (west wall) — la porte elle-même est construite plus loin par DOOR_SPECS[6], encastrée dans une
+  // vraie cloison à la limite exacte où le joueur peut marcher, pas ce panneau décoratif
   const ex=textTex(512,256,(x)=>{x.fillStyle='#0f9d4a';x.fillRect(0,0,512,256);x.fillStyle='#fff';x.fillRect(24,24,210,208);x.fillStyle='#0f9d4a';x.fillRect(40,40,178,176);x.fillStyle='#fff';
     x.beginPath();x.arc(360,62,22,0,6.283);x.fill();x.lineWidth=26;x.lineCap='round';x.strokeStyle='#fff';x.beginPath();x.moveTo(350,100);x.lineTo(330,160);x.lineTo(380,200);x.moveTo(330,160);x.lineTo(290,215);x.moveTo(346,112);x.lineTo(300,140);x.moveTo(352,108);x.lineTo(400,140);x.stroke();
     x.lineWidth=22;x.beginPath();x.moveTo(430,128);x.lineTo(490,128);x.moveTo(465,100);x.lineTo(492,128);x.lineTo(465,156);x.stroke();});
@@ -646,7 +645,9 @@ const S=new V3(0,0,120);
 {
   const fl=plane(4,16,std({color:0x7d858c,roughness:.22,metalness:.1,map:noiseTex('#8a9299',4000,.05,[1,4]),envMapIntensity:1.2}),S.x,0,S.z);fl.rotation.x=-Math.PI/2;
   const wm=std({map:noiseTex('#e3e6e8',4000,.035,[4,1]),roughness:.85});
-  plane(16,3,wm,S.x-2,1.5,S.z,Math.PI/2);plane(16,3,wm,S.x+2,1.5,S.z,-Math.PI/2);plane(4,3,wm,S.x,1.5,S.z-8,0);plane(4,3,wm,S.x,1.5,S.z+8,Math.PI);
+  plane(16,3,wm,S.x-2,1.5,S.z,Math.PI/2);plane(16,3,wm,S.x+2,1.5,S.z,-Math.PI/2);plane(4,3,wm,S.x,1.5,S.z+8,Math.PI);
+  // le mur côté salles IT (Z0) n'est pas construit ici : DOOR_SPECS[0] bâtit à sa place une cloison identique
+  // percée d'une vraie porte, pour n'avoir qu'un seul mur (avec une vraie ouverture) à cet endroit
   const ce=plane(4,16,std({color:0xdfe2e4,roughness:.9}),S.x,3,S.z);ce.rotation.x=Math.PI/2;
   const pm=basic({color:hdr(0xf4f7ff,5)});for(let z=-7;z<=7;z+=2){if(Math.abs(z+3)<.9)continue;const p=plane(.6,.6,pm,S.x,2.99,S.z+z);p.rotation.x=Math.PI/2;}
   // partition wall with booths
@@ -682,8 +683,8 @@ const S=new V3(0,0,120);
   const fl2=textTex(1024,128,(x)=>{x.clearRect(0,0,1024,128);x.fillStyle='rgba(242,194,26,.95)';x.font=`700 88px ${FC}`;x.textAlign='center';x.fillText('UNE PERSONNE À LA FOIS',512,100);});
   const fd=plane(2.6,.32,std({map:fl2,transparent:true,roughness:.5,polygonOffset:true,polygonOffsetFactor:-2}),S.x,.003,S.z-1.6);fd.rotation.x=-Math.PI/2;
   const stripe=plane(3.6,.08,basic({color:0xd9b21a}),S.x,.003,S.z-2.15);stripe.rotation.x=-Math.PI/2;
-  // door at the end behind booths
-  boxAt(1.4,2.2,.06,std({color:0x5d646b,roughness:.45,metalness:.7}),S.x,1.1,S.z-7.96);
+  // sortie vers les salles IT, au fond derrière les sas — la porte elle-même est construite plus loin par
+  // DOOR_SPECS[0], encastrée dans une vraie cloison à la limite exacte où le joueur peut marcher
   const wt=textTex(512,128,(x)=>{x.fillStyle='#1b1d20';x.fillRect(0,0,512,128);x.fillStyle='#fff';x.font=`600 60px ${FC}`;x.fillText('Salles IT  01 · 02 · 03',26,86);});
   plane(1.3,.33,basic({map:wt,color:hdr(0xffffff,1.1)}),S.x,2.55,S.z-7.92);
   // side screen showing access log
@@ -698,7 +699,9 @@ const MM=new V3(-120,0,0);
   const X0=MM.x-6,X1=MM.x+6,Z0=-5,Z1=5,H=3.4;
   const fl=plane(12,10,std({map:tileTex.clone(),roughness:.5,envMapIntensity:.7}),MM.x,0,0);fl.rotation.x=-Math.PI/2;fl.material.map.repeat.set(20,16.7);fl.material.map.needsUpdate=true;
   const wm=std({map:noiseTex('#c4c9cd',5000,.05,[4,1]),roughness:.9});
-  plane(12,H,wm,MM.x,H/2,Z0,0);plane(12,H,wm,MM.x,H/2,Z1,Math.PI);plane(10,H,wm,X0,H/2,0,Math.PI/2);plane(10,H,wm,X1,H/2,0,-Math.PI/2);
+  plane(12,H,wm,MM.x,H/2,Z0,0);plane(10,H,wm,X0,H/2,0,Math.PI/2);plane(10,H,wm,X1,H/2,0,-Math.PI/2);
+  // le mur nord (Z1) n'est pas construit ici : DOOR_SPECS[7] bâtit à sa place une cloison identique percée
+  // d'une vraie porte vers le local onduleurs
   const ce=plane(12,10,std({color:0x1f2226,roughness:.9}),MM.x,H,0);ce.rotation.x=Math.PI/2;
   const lm=basic({color:hdr(0xf2f6ff,6)});for(const z of [-3,0.6,3.6])for(let x=-4.5;x<=4.5;x+=2.25){boxAt(1.2,.05,.1,lm,MM.x+x,3.1,z);}
   const F=[makeFiberFront(0),makeFiberFront(1)];const fb=makeRackBack([], 999);
@@ -735,7 +738,9 @@ const P=new V3(120,0,0);
   const fl=plane(16,10,std({map:noiseTex('#8b929a',8000,.06,[3,2]),roughness:.3,metalness:.05,envMapIntensity:1}),P.x,0,0);fl.rotation.x=-Math.PI/2;
   for(const z of [-1.2,1.2]){const s=plane(11,.07,basic({color:0xd9b21a}),P.x-1.5,.003,z);s.rotation.x=-Math.PI/2;}
   const wm=std({map:noiseTex('#d4d7da',5000,.05,[4,1]),roughness:.9});
-  plane(16,H,wm,P.x,H/2,Z0,0);plane(16,H,wm,P.x,H/2,Z1,Math.PI);plane(10,H,wm,X0,H/2,0,Math.PI/2);plane(10,H,wm,X1,H/2,0,-Math.PI/2);
+  plane(16,H,wm,P.x,H/2,Z0,0);plane(10,H,wm,X0,H/2,0,Math.PI/2);plane(10,H,wm,X1,H/2,0,-Math.PI/2);
+  // le mur nord (Z1) n'est pas construit ici : DOOR_SPECS[8] bâtit à sa place une cloison identique percée
+  // d'une vraie porte vers l'extérieur
   const ce=plane(16,10,std({color:0x2a2d31,roughness:.9}),P.x,H,0);ce.rotation.x=Math.PI/2;
   const lm=basic({color:hdr(0xf4f7ff,6)});for(const z of [-3.2,0,3.2])for(let x=-6;x<=6;x+=3)boxAt(1.4,.05,.12,lm,P.x+x,3.6,z);
   // UPS lineup (fronts +z)
@@ -1055,53 +1060,59 @@ function buildRiddleMarker(r){
   const floorLite=new T.PointLight(new T.Color(r.accent).getHex(),.15,.9,2);floorLite.position.set(0,.1,0);grp.add(floorLite);
   return {grp,mat:screenMat,light:lite};
 }
-// vraie liaison physique entre deux salles : un petit sas fermé (murs + plafond, comme un vrai couloir de
-// jonction entre deux pièces d'un bâtiment technique) avec une porte vitrée coulissante à chaque bout — pas
-// une porte posée toute seule au milieu du vide. On entre par la première porte, on marche dans le sas, on
-// ressort par la seconde : les deux salles « communiquent » vraiment, comme demandé. Ancré sur le point de vue
-// d'arrivée de la salle (r.pos) et la direction du regard (r.tgt), c'est-à-dire le chemin déjà validé par la
-// caméra cinématique, pour être sûr de tomber dans un passage dégagé plutôt qu'au hasard dans une autre allée.
-const TUNNEL_LEN=2.6,TUNNEL_W=1.3,TUNNEL_H=2.3;
-function buildDoor(r,idx){
-  const dir=r.tgt.clone().sub(r.pos);dir.y=0;if(dir.lengthSq()<1e-6)dir.set(0,0,-1);dir.normalize();
-  const ang=Math.atan2(dir.x,dir.z);
-  const dist=Math.max(1.8,Math.min(3,r.pos.distanceTo(r.tgt)*.5));
-  const pos=new V3(r.pos.x,0,r.pos.z).addScaledVector(dir,dist);
-  const zb=ZONE_BOUNDS[r.zone];
-  if(zb){pos.x=Math.max(zb.x0+.7,Math.min(zb.x1-(TUNNEL_LEN+.7),pos.x));pos.z=Math.max(zb.z0+.7,Math.min(zb.z1-(TUNNEL_LEN+.7),pos.z));}
-  pos.y=r.pos.y<.2?Math.max(-.55,r.pos.y+.15):0;
-  if(r.zone==='hall'&&pos.y>-.3)resolveRowCollision(pos);
-  const tg=new T.Group();tg.position.copy(pos);tg.rotation.y=ang;scene.add(tg);
+// vraie porte, encastrée dans un vrai mur : entre deux salles qui ne sont que des points de vue différents de
+// la même pièce (les 6 arrêts de la salle informatique, par exemple), il n'y a pas de mur du tout — donc pas de
+// porte à inventer, on marche simplement de l'un à l'autre. Une porte n'est construite QUE là où deux salles se
+// trouvent réellement dans des zones séparées : on découpe alors une vraie ouverture dans une cloison construite
+// pour l'occasion, exactement à la limite où le joueur peut déjà marcher (la même limite que le clampToZone),
+// pour que la porte soit toujours atteignable et jamais un panneau qui flotte tout seul au milieu d'une pièce.
+function wallGapX(totalW,H,mat,cx,cy,cz,rotY,gapCx,gapW,gapH){
+  const l0=cx-totalW/2,l1=cx+totalW/2,g0=gapCx-gapW/2,g1=gapCx+gapW/2;
+  if(g0-l0>.02)plane(g0-l0,H,mat,l0+(g0-l0)/2,cy,cz,rotY);
+  if(l1-g1>.02)plane(l1-g1,H,mat,g1+(l1-g1)/2,cy,cz,rotY);
+  const lh=H-gapH;if(lh>.02)plane(gapW,lh,mat,gapCx,gapH+lh/2,cz,rotY);
+}
+function wallGapZ(totalD,H,mat,cx,cy,cz,rotY,gapCz,gapW,gapH){
+  const n0=cz-totalD/2,n1=cz+totalD/2,g0=gapCz-gapW/2,g1=gapCz+gapW/2;
+  if(g0-n0>.02)plane(g0-n0,H,mat,cx,cy,n0+(g0-n0)/2,rotY);
+  if(n1-g1>.02)plane(n1-g1,H,mat,cx,cy,g1+(n1-g1)/2,rotY);
+  const lh=H-gapH;if(lh>.02)plane(gapW,lh,mat,cx,gapH+lh/2,cz,rotY);
+}
+function buildWallDoor(cx,cz,rotY,gapW,gapH,wallHalfW){
+  const dir=new V3(Math.sin(rotY),0,Math.cos(rotY)),perp=new V3(-dir.z,0,dir.x);
+  const tg=new T.Group();tg.position.set(cx,0,cz);tg.rotation.y=rotY;scene.add(tg);
   const doorMat=std({color:0xbfe0f0,roughness:.05,metalness:.05,transparent:true,opacity:.24,depthWrite:false,side:T.DoubleSide,envMapIntensity:2.2});
-  const closedY=1.04;
-  function buildLeaf(z,withReader){
-    const lg=new T.Group();lg.position.set(0,closedY,z);tg.add(lg);
-    plane(.92,2.08,doorMat,0,0,0,0,lg);
-    boxAt(.035,2.1,.035,M.alu,-.47,0,.012,lg);boxAt(.035,2.1,.035,M.alu,.47,0,.012,lg);
-    boxAt(.98,.05,.05,M.alu,0,1.06,.012,lg);
-    let ledMat=null;
-    if(withReader){
-      // lecteur de badge + voyant d'accès (petit détail réaliste, pas un grand aplat de couleur)
-      boxAt(.08,.12,.03,M.glossBlack,.56,.08,.02,lg);
-      ledMat=basic({color:hdr(0xff4a3c,3)});
-      plane(.05,.05,ledMat,.56,.08,.037,0,lg);
-    }
-    return {grp:lg,closedY,ledMat};
-  }
-  const leaf1=buildLeaf(0,true),leaf2=buildLeaf(TUNNEL_LEN,false);
-  // murs latéraux + plafond du sas, pour que ce soit un vrai petit couloir fermé et pas une porte posée dans le vide
-  const wallM=std({color:0xd7dadd,roughness:.85});
-  for(const side of [-1,1])boxAt(.08,TUNNEL_H,TUNNEL_LEN-.3,wallM,side*(TUNNEL_W/2),TUNNEL_H/2,TUNNEL_LEN/2,tg);
-  boxAt(TUNNEL_W,.08,TUNNEL_LEN-.3,wallM,0,TUNNEL_H,TUNNEL_LEN/2,tg);
-  tg.visible=false;
-  const doorObj={tg,leaves:[leaf1,leaf2],pos,cx:pos.x+dir.x*(TUNNEL_LEN/2),cz:pos.z+dir.z*(TUNNEL_LEN/2),
-    openDist:TUNNEL_LEN/2+1.7,passLen:TUNNEL_LEN+.3,locked:true,dir:dir.clone(),perp:new V3(-dir.z,0,dir.x)};
+  const leafW=gapW-.08,leafH=gapH-.04,closedY=leafH/2+.02;
+  const lg=new T.Group();lg.position.set(0,closedY,0);tg.add(lg);
+  plane(leafW,leafH,doorMat,0,0,0,0,lg);
+  boxAt(.035,leafH+.02,.035,M.alu,-leafW/2-.015,0,.012,lg);boxAt(.035,leafH+.02,.035,M.alu,leafW/2+.015,0,.012,lg);
+  boxAt(leafW+.07,.05,.05,M.alu,0,leafH/2+.02,.012,lg);
+  // lecteur de badge + voyant d'accès (petit détail réaliste, pas un grand aplat de couleur)
+  boxAt(.08,.12,.03,M.glossBlack,leafW/2-.1,-.25,.03,lg);
+  const ledMat=basic({color:hdr(0xff4a3c,3)});
+  plane(.05,.05,ledMat,leafW/2-.1,-.25,.047,0,lg);
+  const doorObj={tg,leaves:[{grp:lg,closedY,ledMat}],pos:new V3(cx,0,cz),cx,cz,gapW,wallHalfW,
+    openDist:2.4,locked:true,dir,perp};
   doorObj.setUnlocked=(u)=>{
     if(doorObj.locked===!u)return;doorObj.locked=!u;
-    leaf1.ledMat.color.copy(hdr(u?0x3be06a:0xff4a3c,3));
+    ledMat.color.copy(hdr(u?0x3be06a:0xff4a3c,3));
   };
   return doorObj;
 }
+// une spécification par transition qui franchit vraiment une limite de zone (sécurité → salle informatique →
+// meet-me room → local onduleurs → extérieur → NOC) ; les transitions entre deux arrêts de la même salle, et
+// celle qui part de l'extérieur (pas de mur à proximité du joueur), n'ont volontairement aucune entrée ici.
+// Pour sec/mmr/pwr, cette cloison REMPLACE le mur plein d'origine (même largeur, même hauteur) : une seule
+// vraie paroi avec une vraie ouverture, pas deux murs l'un derrière l'autre. Pour la salle informatique, le
+// mur d'origine reste (il sert sur toute la longueur du bâtiment et porte les unités de climatisation) et la
+// cloison n'ajoute qu'une courte section, à l'écart de ces unités, juste devant lui.
+const DOOR_WALL_MAT=()=>std({color:0xd7dadd,roughness:.85});
+const DOOR_SPECS={
+  0:()=>{const b=ZONE_BOUNDS.sec;wallGapX(4,3,DOOR_WALL_MAT(),S.x,1.5,b.z0,0,S.x,1.4,2.15);return buildWallDoor(S.x,b.z0,0,1.4,2.15,2);},
+  6:()=>{const b=ZONE_BOUNDS.hall,d=2.4;wallGapZ(d,2.6,DOOR_WALL_MAT(),b.x0,1.3,-9.4,Math.PI/2,-9.4,1.3,2.2);return buildWallDoor(b.x0,-9.4,Math.PI/2,1.3,2.2,d/2);},
+  7:()=>{const b=ZONE_BOUNDS.mmr;wallGapX(12,3.4,DOOR_WALL_MAT(),MM.x,1.7,b.z1,Math.PI,MM.x,1.1,2.2);return buildWallDoor(MM.x,b.z1,Math.PI,1.1,2.2,6);},
+  8:()=>{const b=ZONE_BOUNDS.pwr;wallGapX(16,4,DOOR_WALL_MAT(),P.x,2,b.z1,Math.PI,P.x,1.1,2.2);return buildWallDoor(P.x,b.z1,Math.PI,1.1,2.2,8);},
+};
 const doors=[];
 const AISLE_Z=[-6.5,-3.8,-1.1,1.6,4.3];
 function nearestAisleZ(z){return AISLE_Z.reduce((a,b)=>Math.abs(b-z)<Math.abs(a-z)?b:a);}
@@ -1133,7 +1144,7 @@ ROOMS.forEach((r,idx)=>{
   if(zb){r.rpos.x=Math.max(zb.x0+.45,Math.min(zb.x1-.45,r.rpos.x));r.rpos.z=Math.max(zb.z0+.45,Math.min(zb.z1-.45,r.rpos.z));}
   if(r.zone==='hall'&&r.rpos.y>-.3)resolveRowCollision(r.rpos);
   r.marker=buildRiddleMarker(r);r.solved=false;r.marker.grp.visible=false;
-  if(idx<ROOMS.length-1)doors[idx]=buildDoor(r,idx);
+  if(DOOR_SPECS[idx])doors[idx]=DOOR_SPECS[idx]();
 });
 
 /* ---------------------------------------------------------------- HUD */
@@ -1245,30 +1256,26 @@ function updateFree(dt){
     const r=ROOMS[roomIdx];
     const near=!r.solved&&camera.position.distanceTo(r.rpos)<2.4?r:null;
     activeNear=near;
-    // porte vers la salle suivante : un vrai petit sas à deux portes relie les salles. Pas de touche à presser
-    // pour « passer » — les deux portes s'ouvrent toutes seules à l'approche une fois la salle résolue, et
-    // c'est en marchant à travers le sas (comme un vrai couloir) qu'on rejoint la salle suivante. Si c'est
-    // encore verrouillé, la première porte bute comme un vrai battant fermé, et les murs du sas empêchent de
-    // passer à côté.
+    // porte vers la salle suivante : seules les salles séparées par une vraie cloison (DOOR_SPECS) en ont une.
+    // La porte est encastrée exactement à la limite où clampToZone arrête déjà le joueur, donc elle est toujours
+    // atteignable — pas de touche à presser, elle s'ouvre toute seule à l'approche une fois la salle résolue, et
+    // c'est en la franchissant qu'on rejoint la salle suivante. Verrouillée, ou si on tente de passer à côté
+    // dans la partie pleine du mur, on bute simplement dessus comme un vrai mur.
     const door=doors[roomIdx];
     let doorNear=null;
     if(door){
       door.setUnlocked(r.solved);
       const rel=_v1.copy(camera.position).sub(door.pos);
-      const s=rel.dot(door.dir),lateral=rel.dot(door.perp);
-      if(Math.abs(lateral)<.55&&s>-2.3&&s<door.passLen+1)doorNear=door;
-      if(!door.locked&&door._lastS!==undefined&&door._lastS<door.passLen&&s>=door.passLen){
-        enterRoom(roomIdx+1);
-        return;
-      }else if(door.locked&&Math.abs(lateral)<.42&&s>-.16&&s<.16){
-        camera.position.addScaledVector(door.dir,-.16-s);
-        showToast('La porte reste verrouillée : trouve d’abord la borne 🧩 de cette salle.',2600);
-      }else if(s>.1&&s<TUNNEL_LEN-.1&&Math.abs(lateral)>TUNNEL_W/2-.22){
-        // murs du sas : on ne peut pas passer à travers en coupant par le côté
-        const clampLat=Math.sign(lateral)*(TUNNEL_W/2-.22);
-        camera.position.addScaledVector(door.perp,clampLat-lateral);
+      const s=rel.dot(door.dir),lateral=rel.dot(door.perp),half=door.gapW/2-.12;
+      if(Math.abs(lateral)<door.gapW/2+.6&&s<1.6)doorNear=door;
+      if(!door.locked&&Math.abs(lateral)<=half){
+        // embrasure ouverte et dégagée : passage libre, on bascule dès qu'on l'a franchie
+        if(s<=.08){enterRoom(roomIdx+1);return;}
+      }else if(s<.3&&Math.abs(lateral)<=door.wallHalfW){
+        // partie pleine de la cloison, ou porte encore verrouillée : on bute dessus comme un vrai mur
+        camera.position.addScaledVector(door.dir,.3-s);
+        if(door.locked&&Math.abs(lateral)<=half)showToast('La porte reste verrouillée : trouve d’abord la borne 🧩 de cette salle.',2600);
       }
-      door._lastS=s;
     }
     activeDoor=doorNear;
     const ip=$('interactPrompt');
@@ -1338,7 +1345,8 @@ function openRiddle(r){
         b.classList.add('right');
         if(!r.solved){r.solved=true;r.marker.mat.emissiveIntensity=.3;updateExplCount();updateIntegrity();pushProgress();
           if(ROOMS.every(x=>x.solved))setTimeout(endGame,900);
-          else setTimeout(()=>showToast('Bien joué ! La porte vers la salle suivante est déverrouillée : avance vers elle, elle s’ouvre toute seule.',4500),400);}
+          else if(doors[roomIdx])setTimeout(()=>showToast('Bien joué ! La porte vers la salle suivante est déverrouillée : avance vers elle, elle s’ouvre toute seule.',4500),400);
+          else setTimeout(()=>showToast('Bien joué ! On continue…',2200),400);}
       }else{b.classList.add('wrong');cho.children[r.correct].classList.add('right');if(!r.solved){gameErrors++;pushProgress();}}
       factEl.classList.add('show');closeBtn.classList.add('show');
     });
@@ -1346,7 +1354,14 @@ function openRiddle(r){
   });
   $('modalWrap').classList.add('show');
 }
-function closeRiddle(){riddleOpen=false;$('modalWrap').classList.remove('show');canvas.focus();}
+function closeRiddle(){
+  riddleOpen=false;$('modalWrap').classList.remove('show');canvas.focus();
+  // pas de porte pour cette salle (même pièce que la suivante, ou départ en extérieur sans mur à proximité) :
+  // une fois résolue, on continue tout seul plutôt que d'attendre qu'on marche vers une porte qui n'existe pas
+  if(exploring&&roomIdx>=0){const r=ROOMS[roomIdx];
+    if(r.solved&&!doors[roomIdx]&&roomIdx<ROOMS.length-1)setTimeout(()=>enterRoom(roomIdx+1),500);
+  }
+}
 $('mClose').addEventListener('click',closeRiddle);
 /* ---------------------------------------------------------------- fin de partie & classement */
 const hasStorage=typeof window.storage!=='undefined';
