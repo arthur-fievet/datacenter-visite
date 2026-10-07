@@ -536,6 +536,13 @@ const coldAisles=[{z0:-7.4,z1:-5.6,c:-6.5,name:'A'},{z0:-2.0,z1:-.2,c:-1.1,name:
  for(const z of [-2.6,.4,2.8,-5]){const b=boxAt(12.4,.1,.32,bskMat,-2.8,-.47,z);for(let i=0;i<9;i++){const c=cyl(.012,.012,12.2,5,std({color:cabCols[i%5],roughness:.7,envMapIntensity:.05}),-2.8,-.495+(i%3)*.022,z-.1+Math.floor(i/3)*.07);c.rotation.z=Math.PI/2;}}
  const pwr=std({color:0xd8661a,roughness:.6,envMapIntensity:.05});for(let i=0;i<4;i++){const c=cyl(.02,.02,12,8,pwr,-2.8,-.56,1.5+i*.06);c.rotation.z=Math.PI/2;}
  const leak=plane(12,.012,basic({color:0xd8c21a}),-2.8,-.598,-3.3);leak.rotation.x=-Math.PI/2;
+ // parois de fondation : sans elles on voit le vide dès qu'on s'approche du bord du vide sanitaire
+ const fondMat=std({map:noiseTex('#555b61',9000,.1,[6,2]),roughness:.9,envMapIntensity:.05,side:T.DoubleSide});
+ const fh=.565,fy=-.6+fh/2; // du dalle (-.6) au sous-face du faux plancher (-.035)
+ {const w=plane(HX1-HX0,fh,fondMat,(HX0+HX1)/2,fy,HZ0,0);}
+ {const w=plane(HX1-HX0,fh,fondMat,(HX0+HX1)/2,fy,HZ1,0);}
+ {const w=plane(HZ1-HZ0,fh,fondMat,HX0,fy,(HZ0+HZ1)/2,Math.PI/2);}
+ {const w=plane(HZ1-HZ0,fh,fondMat,HX1,fy,(HZ0+HZ1)/2,Math.PI/2);}
 }
 
 // racks
@@ -1125,7 +1132,23 @@ function wallGapZ(totalD,H,mat,cx,cy,cz,rotY,gapCz,gapW,gapH){
   if(n1-g1>.02)plane(n1-g1,H,mat,cx,cy,g1+(n1-g1)/2,rotY);
   const lh=H-gapH;if(lh>.02)plane(gapW,lh,mat,cx,gapH+lh/2,cz,rotY);
 }
-function buildWallDoor(cx,cz,rotY,gapW,gapH,wallHalfW){
+// derrière chaque porte, les deux salles ne sont pas vraiment adjacentes dans le monde 3D (la visite a été
+// construite comme un enchaînement de points de vue, pas un bâtiment continu) : sans rien de plus, ouvrir la
+// porte donnait donc sur le vide. On construit ici un petit renfoncement fermé (sol, plafond, murs latéraux,
+// mur du fond) dans les couleurs de la salle suivante, pour qu'on ait bien l'impression de voir dans la pièce
+// d'après plutôt que dans le néant.
+function buildDoorPreview(tg,gapW,gapH,theme){
+  const D=2.2,side=T.DoubleSide;
+  const floorMat=std({color:theme.floor,roughness:.85,side}),wallMat=std({color:theme.wall,roughness:.8,side}),
+    farMat=std({color:theme.far,roughness:.7,side});
+  const fl=plane(gapW+.6,D,floorMat,0,0,-D/2,0,tg);fl.rotation.x=-Math.PI/2;
+  const ce=plane(gapW+.6,D,wallMat,0,gapH,-D/2,0,tg);ce.rotation.x=Math.PI/2;
+  plane(D,gapH,wallMat,-(gapW/2+.25),gapH/2,-D/2,Math.PI/2,tg);
+  plane(D,gapH,wallMat,gapW/2+.25,gapH/2,-D/2,Math.PI/2,tg);
+  plane(gapW+.6,gapH,farMat,0,gapH/2,-D,0,tg);
+  const lt=new T.PointLight(theme.accent,.6,D*2.4,2);lt.position.set(0,gapH*.75,-D*.55);tg.add(lt);
+}
+function buildWallDoor(cx,cz,rotY,gapW,gapH,wallHalfW,theme){
   const dir=new V3(Math.sin(rotY),0,Math.cos(rotY)),perp=new V3(-dir.z,0,dir.x);
   const tg=new T.Group();tg.position.set(cx,0,cz);tg.rotation.y=rotY;scene.add(tg);
   // verre dépoli (pas transparent) : une porte de salle technique à badge est opaque — et ça évite de voir au
@@ -1140,6 +1163,7 @@ function buildWallDoor(cx,cz,rotY,gapW,gapH,wallHalfW){
   boxAt(.08,.12,.03,M.glossBlack,leafW/2-.1,-.25,.03,lg);
   const ledMat=basic({color:hdr(0xff4a3c,3)});
   plane(.05,.05,ledMat,leafW/2-.1,-.25,.047,0,lg);
+  if(theme)buildDoorPreview(tg,gapW,gapH,theme);
   const doorObj={tg,leaves:[{grp:lg,closedY,ledMat}],pos:new V3(cx,0,cz),cx,cz,gapW,wallHalfW,
     openDist:3.2,locked:true,dir,perp};
   doorObj.setUnlocked=(u)=>{
@@ -1156,11 +1180,16 @@ function buildWallDoor(cx,cz,rotY,gapW,gapH,wallHalfW){
 // mur d'origine reste (il sert sur toute la longueur du bâtiment et porte les unités de climatisation) et la
 // cloison n'ajoute qu'une courte section, à l'écart de ces unités, juste devant lui.
 const DOOR_WALL_MAT=()=>std({color:0xd7dadd,roughness:.85});
+// couleurs du petit renfoncement visible une fois la porte ouverte, dans l'esprit de la salle suivante
+const THEME_HALL={floor:0x8a9096,wall:0xd7dadd,far:0x1c2430,accent:0x2b62b8};
+const THEME_MMR={floor:0x7d848c,wall:0xc9ced3,far:0x16233a,accent:0xf2c21a};
+const THEME_PWR={floor:0x746a60,wall:0xb7aa98,far:0x2a1b12,accent:0xd8661a};
+const THEME_EXT={floor:0x45532f,wall:0xb9c6cf,far:0x8fc7e8,accent:0xfff4d6};
 const DOOR_SPECS={
-  0:()=>{const b=ZONE_BOUNDS.sec;wallGapX(4,3,DOOR_WALL_MAT(),S.x,1.5,b.z0,0,S.x,1.4,2.15);return buildWallDoor(S.x,b.z0,0,1.4,2.15,2);},
-  6:()=>{const b=ZONE_BOUNDS.hall,d=2.4;wallGapZ(d,2.6,DOOR_WALL_MAT(),b.x0,1.3,-9.4,Math.PI/2,-9.4,1.3,2.2);return buildWallDoor(b.x0,-9.4,Math.PI/2,1.3,2.2,d/2);},
-  7:()=>{const b=ZONE_BOUNDS.mmr;wallGapX(12,3.4,DOOR_WALL_MAT(),MM.x,1.7,b.z1,Math.PI,MM.x,1.1,2.2);return buildWallDoor(MM.x,b.z1,Math.PI,1.1,2.2,6);},
-  8:()=>{const b=ZONE_BOUNDS.pwr;wallGapX(16,4,DOOR_WALL_MAT(),P.x,2,b.z1,Math.PI,P.x,1.1,2.2);return buildWallDoor(P.x,b.z1,Math.PI,1.1,2.2,8);},
+  0:()=>{const b=ZONE_BOUNDS.sec;wallGapX(4,3,DOOR_WALL_MAT(),S.x,1.5,b.z0,0,S.x,1.4,2.15);return buildWallDoor(S.x,b.z0,0,1.4,2.15,2,THEME_HALL);},
+  6:()=>{const b=ZONE_BOUNDS.hall,d=2.4;wallGapZ(d,2.6,DOOR_WALL_MAT(),b.x0,1.3,-9.4,Math.PI/2,-9.4,1.3,2.2);return buildWallDoor(b.x0,-9.4,Math.PI/2,1.3,2.2,d/2,THEME_MMR);},
+  7:()=>{const b=ZONE_BOUNDS.mmr;wallGapX(12,3.4,DOOR_WALL_MAT(),MM.x,1.7,b.z1,Math.PI,MM.x,1.1,2.2);return buildWallDoor(MM.x,b.z1,Math.PI,1.1,2.2,6,THEME_PWR);},
+  8:()=>{const b=ZONE_BOUNDS.pwr;wallGapX(16,4,DOOR_WALL_MAT(),P.x,2,b.z1,Math.PI,P.x,1.1,2.2);return buildWallDoor(P.x,b.z1,Math.PI,1.1,2.2,8,THEME_EXT);},
 };
 const doors=[];
 const AISLE_Z=[-6.5,-3.8,-1.1,1.6,4.3];
@@ -1302,7 +1331,7 @@ function updateFree(dt){
   // sous le faux plancher on est accroupi dans un espace exigu : on ne sprinte pas là-dedans, et on avance
   // nettement plus lentement que debout (avant ça, la même vitesse qu'en marche normale, vue de si près du
   // sol, donnait l'impression de courir à toute vitesse)
-  const spd=(underfloor?1.1:(fkeys.sprint?6.2:3.1))*dt;_mv.set(0,0,0);
+  const spd=(underfloor?(fkeys.sprint?2.3:1.1):(fkeys.sprint?6.2:3.1))*dt;_mv.set(0,0,0);
   if(fkeys.f)_mv.add(_fwd);if(fkeys.b)_mv.sub(_fwd);if(fkeys.r)_mv.add(_rgt);if(fkeys.l)_mv.sub(_rgt);
   if(_mv.lengthSq()>1e-6){_mv.normalize().multiplyScalar(spd);camera.position.x+=_mv.x;camera.position.z+=_mv.z;}
   if(exploring&&roomIdx>=0){
@@ -1678,7 +1707,7 @@ addEventListener('keydown',e=>{if(!started)return;const k=e.key.toLowerCase();
   if(MOVE_KEYS[k]){if(!exploring){enterRoom(0);}fkeys[MOVE_KEYS[k]]=1;e.preventDefault();}
   else if(k===' '){
     if(!exploring)enterRoom(0);
-    else if(freeMode&&jumpOffset<=0&&jumpVel===0){jumpVel=JUMP_VEL;}
+    else if(freeMode&&!underfloor&&jumpOffset<=0&&jumpVel===0){jumpVel=JUMP_VEL;}
     e.preventDefault();
   }
   else if(e.shiftKey&&freeMode){fkeys.sprint=1;}
