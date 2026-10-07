@@ -92,8 +92,10 @@ body.free #explCount{display:block}
 #integrity{position:absolute;left:clamp(16px,2.4vw,28px);top:calc(20px + env(safe-area-inset-top,0px));display:none;flex-direction:column;align-items:flex-start;gap:7px;z-index:5;pointer-events:none;background:rgba(10,12,16,.46);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:11px 18px 13px;box-shadow:0 8px 24px rgba(0,0,0,.3);backdrop-filter:blur(4px);max-width:220px}
 body.free #integrity{display:flex}
 #integrity .lbl{font-size:11.5px;letter-spacing:.03em;color:var(--ink-dim);text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap}
-#integrity .bar{width:170px;height:6px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.4)}
-#integrity .bar i{display:block;height:100%;width:15%;background:linear-gradient(90deg,#ef5b52,#f2c21a 55%,#6fd08c);transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+/* .ibar, pas .bar : la classe .bar est déjà prise par les bandes noires du mode cinéma (position:fixed, pleine
+   largeur) — la réutiliser ici la faisait sortir de la carte et se plaquer sur le bord gauche de l'écran */
+#integrity .ibar{position:relative;width:170px;height:6px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+#integrity .ibar i{display:block;height:100%;width:15%;background:linear-gradient(90deg,#ef5b52,#f2c21a 55%,#6fd08c);transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
 #sessionBox{position:absolute;right:clamp(16px,2.4vw,28px);top:calc(20px + env(safe-area-inset-top,0px));display:none;flex-direction:column;align-items:stretch;gap:8px;background:rgba(10,12,16,.46);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:11px 16px 13px;box-shadow:0 8px 24px rgba(0,0,0,.3);backdrop-filter:blur(4px);z-index:5;min-width:190px;max-width:230px}
 body.free #sessionBox.show{display:flex}
 #sessionTop{display:flex;align-items:center;justify-content:space-between;gap:10px;pointer-events:auto}
@@ -170,7 +172,7 @@ body.free #sessionBox.show{display:flex}
   <div id="toast"></div>
   <div id="integrity">
     <span class="lbl" id="integrityLbl">Data center : 15 % sauvé</span>
-    <div class="bar"><i id="integrityBar"></i></div>
+    <div class="ibar"><i id="integrityBar"></i></div>
   </div>
   <div id="sessionBox">
     <div id="sessionTop"><span id="sessionCodeLbl"></span><button id="sessionCopyBtn" type="button" title="Copier le code de partie">Copier</button></div>
@@ -838,7 +840,11 @@ const ZONE_BOUNDS={
  ext:{x0:E.x-75,x1:E.x+75,z0:E.z-75,z1:E.z+75,y0:0,y1:40},
 };
 {
-  const grass=add(new T.CircleGeometry(885,96),std({map:noiseTex('#171d14',16000,.2,[160,160],256),roughness:1}),E.x,-.03,E.z);grass.rotation.x=-Math.PI/2;
+  // rayon volontairement limité (pas un disque à perte de vue) : les zones intérieures sont à 300+ unités de
+  // distance (sec, salle informatique, meet-me room, local onduleurs…) — un disque trop grand passe dessous et
+  // devient visible au loin dès qu'une vraie porte s'ouvre sur l'extérieur, un bâtiment qui ne devrait pas s'y
+  // trouver
+  const grass=add(new T.CircleGeometry(260,96),std({map:noiseTex('#171d14',16000,.2,[160,160],256),roughness:1}),E.x,-.03,E.z);grass.rotation.x=-Math.PI/2;
   const asph=plane(124,96,std({map:noiseTex('#303236',20000,.18,[16,12],512),roughness:.85,envMapIntensity:.5}),E.x,0,E.z);asph.rotation.x=-Math.PI/2;
   // parking lines
   for(let i=0;i<14;i++){const l=plane(.12,5,basic({color:0x8f9296}),E.x-40+i*3,.01,E.z+36);l.rotation.x=-Math.PI/2;}
