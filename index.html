@@ -183,8 +183,11 @@ body.free #integrity{display:flex}
     <div id="pseudoWrap">
       <label for="pseudoInput">Ton pseudo (pour le classement)</label>
       <input id="pseudoInput" type="text" maxlength="18" placeholder="ex. Arthur" autocomplete="off">
-      <label for="codeInput" style="margin-top:8px">Code de partie (vide = nouvelle partie)</label>
-      <input id="codeInput" type="text" maxlength="6" placeholder="ex. NDC4" autocomplete="off" style="text-transform:uppercase">
+      <label for="codeInput" style="margin-top:8px">Code de partie — partage-le, ou entre celui d'un ami pour le rejoindre</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="codeInput" type="text" maxlength="6" placeholder="ex. NDC4" autocomplete="off" style="text-transform:uppercase">
+        <button id="genCodeBtn" type="button" title="Générer un nouveau code" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:#1b1e25;color:#fff;cursor:pointer;font-size:13px;white-space:nowrap">🔄 Nouveau code</button>
+      </div>
     </div>
     <button id="go" disabled>Préparation de la visite…</button>
     <div class="in-keys">
@@ -1223,6 +1226,48 @@ const MQTT_WS_URL='wss://broker.hivemq.com:8884/mqtt';
 const MQTT_NS='dctour/v3';
 let playerId=Math.random().toString(36).slice(2,9);
 let mqttClient=null,mqttOnline=false,players={};
+/* avatars des autres joueurs, visibles en direct dans la scène (même mécanisme que le corps du joueur) */
+const remotePlayers={};
+function colorForId(id){let h=0;for(let i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))>>>0;return new T.Color(`hsl(${h%360},70%,55%)`).getHex();}
+function makeNameSprite(text){
+  const [c,x]=cvs(256,64);
+  x.font=`600 30px ${FB}`;x.textAlign='center';x.textBaseline='middle';
+  const tw=Math.min(236,x.measureText(text).width+26),rx=(256-tw)/2;
+  x.fillStyle='rgba(8,10,14,.6)';x.beginPath();
+  if(x.roundRect)x.roundRect(rx,12,tw,40,9);else x.rect(rx,12,tw,40);
+  x.fill();x.fillStyle='#fff';x.fillText(text,128,33);
+  const spr=new T.Sprite(new T.SpriteMaterial({map:tex(c,{srgb:false}),depthTest:false,transparent:true}));
+  spr.scale.set(1.15,.29,1);spr.position.set(0,.62,0);
+  return spr;
+}
+function buildRemoteAvatar(id,name){
+  const g=new T.Group();
+  const cloth=std({color:colorForId(id),roughness:.8}),skin=std({color:0xd9a876,roughness:.75}),shoe=std({color:0x15161a,roughness:.5});
+  boxAt(.26,.26,.24,skin,0,.08,0,g);
+  boxAt(.42,.5,.26,cloth,0,-.32,0,g);
+  boxAt(.36,.24,.24,cloth,0,-.75,0,g);
+  for(const side of [-1,1]){
+    boxAt(.14,.46,.14,cloth,side*.24,-.42,0,g);
+    boxAt(.16,.8,.16,cloth,side*.1,-1.15,0,g);
+    boxAt(.17,.09,.27,shoe,side*.1,-1.58,-.08,g);
+  }
+  g.add(makeNameSprite(name));
+  g.visible=false;scene.add(g);
+  return g;
+}
+function updateRemotePlayers(dt){
+  const now=Date.now();
+  for(const id in remotePlayers){
+    const rp=remotePlayers[id];
+    if(now-rp.lastSeen>12000){scene.remove(rp.grp);delete remotePlayers[id];continue;}
+    rp.grp.visible=rp.show;
+    if(rp.show){
+      rp.grp.position.lerp(rp.target,Math.min(1,dt*8));
+      let dy=rp.yawTarget-rp.yaw;while(dy>Math.PI)dy-=2*Math.PI;while(dy<-Math.PI)dy+=2*Math.PI;
+      rp.yaw+=dy*Math.min(1,dt*8);rp.grp.rotation.y=rp.yaw;
+    }
+  }
+}
 function genCode(){const C='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<4;i++)s+=C[Math.floor(Math.random()*C.length)];return s;}
 function renderSessionLabel(){
   if(!sessionCode){$('sessionLbl').textContent='';return;}
@@ -1237,7 +1282,9 @@ function renderSessionLabel(){
 }
 function publishProgress(){
   if(!mqttClient||!mqttOnline||!sessionCode)return;
-  const payload=JSON.stringify({id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded,ts:Date.now()});
+  const p=camera.position;
+  const payload=JSON.stringify({id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded,
+    exploring,x:+p.x.toFixed(2),y:+p.y.toFixed(2),z:+p.z.toFixed(2),yaw:+yaw.toFixed(3),ts:Date.now()});
   try{mqttClient.publish(`${MQTT_NS}/${sessionCode}/${playerId}`,payload,{retain:true,qos:0});}catch(e){}
 }
 async function pushProgress(){
@@ -1268,13 +1315,21 @@ async function initSession(code){
     mqttClient.on('message',(topic,msg)=>{
       try{
         const data=JSON.parse(msg.toString());
-        if(data&&data.id)players[data.id]={...data,ts:Date.now()};
+        if(!data||!data.id)return;
+        players[data.id]={...data,ts:Date.now()};
+        if(data.id!==playerId){
+          let rp=remotePlayers[data.id];
+          if(!rp){rp=remotePlayers[data.id]={grp:buildRemoteAvatar(data.id,data.name||'Joueur'),target:new V3(),yaw:0,yawTarget:0,show:false};scene.add(rp.grp);}
+          rp.name=data.name;rp.lastSeen=Date.now();rp.show=!!data.exploring;
+          if(typeof data.x==='number'){rp.target.set(data.x,data.y,data.z);rp.yawTarget=data.yaw||0;
+            if(!rp.placed){rp.grp.position.copy(rp.target);rp.yaw=rp.yawTarget;rp.placed=true;}}
+        }
         renderSessionLabel();
       }catch(e){}
     });
   }catch(e){showToast('Multijoueur indisponible — tu joues en solo.',6000);}
   sessionReady=true;
-  pollTimer=setInterval(()=>{if(exploring){publishProgress();renderSessionLabel();}},4000);
+  pollTimer=setInterval(()=>{if(exploring){publishProgress();}renderSessionLabel();},200);
 }
 async function loadLeaderboard(){
   if(!hasStorage)return [];
@@ -1348,6 +1403,7 @@ function updateDoors(dt){
 }
 function frame(now,dt){
   updateDoors(dt);
+  updateRemotePlayers(dt);
   if(freeMode){updateFree(dt);return;}
   if(anim&&anim.type==='fly'){
     const p=Math.min(1,(now-anim.t0)/anim.dur),e=ease(p);
@@ -1411,6 +1467,8 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;
 requestAnimationFrame(loop);
 setTimeout(()=>{fadeEl.style.opacity=0;},200);
 setStatus('');goBtn.disabled=false;goBtn.textContent='Commencer la visite';goBtn.focus();
+if(!$('codeInput').value)$('codeInput').value=genCode();
+$('genCodeBtn').addEventListener('click',()=>{$('codeInput').value=genCode();$('codeInput').focus();});
 const sessionCopyBtn=$('sessionCopyBtn');
 if(sessionCopyBtn)sessionCopyBtn.addEventListener('click',()=>{
   if(!sessionCode)return;
