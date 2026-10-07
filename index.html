@@ -1302,7 +1302,7 @@ function updateFree(dt){
   // sous le faux plancher on est accroupi dans un espace exigu : on ne sprinte pas là-dedans, et on avance
   // nettement plus lentement que debout (avant ça, la même vitesse qu'en marche normale, vue de si près du
   // sol, donnait l'impression de courir à toute vitesse)
-  const spd=(underfloor?2:(fkeys.sprint?6.2:3.1))*dt;_mv.set(0,0,0);
+  const spd=(underfloor?1.1:(fkeys.sprint?6.2:3.1))*dt;_mv.set(0,0,0);
   if(fkeys.f)_mv.add(_fwd);if(fkeys.b)_mv.sub(_fwd);if(fkeys.r)_mv.add(_rgt);if(fkeys.l)_mv.sub(_rgt);
   if(_mv.lengthSq()>1e-6){_mv.normalize().multiplyScalar(spd);camera.position.x+=_mv.x;camera.position.z+=_mv.z;}
   if(exploring&&roomIdx>=0){
