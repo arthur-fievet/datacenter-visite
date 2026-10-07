@@ -87,22 +87,24 @@ body.free #explCount{display:block}
 #pseudoWrap label{font-size:12.5px;color:var(--ink-dim);letter-spacing:.02em}
 #pseudoInput{width:min(260px,70vw);text-align:center;background:#1b1e25;border:1px solid rgba(255,255,255,.18);color:#fff;padding:10px 14px;border-radius:10px;font-size:15px;font-family:inherit}
 #pseudoInput:focus{outline:none;border-color:var(--accent)}
-#integrity{position:absolute;left:50%;top:calc(42px + env(safe-area-inset-top,0px));transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:10px;z-index:5;pointer-events:none}
+/* HUD réparti sur l'écran plutôt qu'empilé au même endroit : % sauvé en haut à gauche, salle/bornes au centre
+   (#explCount, inchangé), code de partie + joueurs en haut à droite — plus aucun chevauchement de texte. */
+#integrity{position:absolute;left:clamp(16px,2.4vw,28px);top:calc(20px + env(safe-area-inset-top,0px));display:none;flex-direction:column;align-items:flex-start;gap:7px;z-index:5;pointer-events:none;background:rgba(10,12,16,.46);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:11px 18px 13px;box-shadow:0 8px 24px rgba(0,0,0,.3);backdrop-filter:blur(4px);max-width:220px}
 body.free #integrity{display:flex}
-#hudCard{display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(10,12,16,.46);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px 20px 12px;box-shadow:0 8px 24px rgba(0,0,0,.3);backdrop-filter:blur(4px)}
-#integrity .lbl{font-size:11.5px;letter-spacing:.03em;color:var(--ink-dim);text-shadow:0 1px 3px rgba(0,0,0,.7)}
-#integrity .bar{width:210px;height:6px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+#integrity .lbl{font-size:11.5px;letter-spacing:.03em;color:var(--ink-dim);text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap}
+#integrity .bar{width:170px;height:6px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.4)}
 #integrity .bar i{display:block;height:100%;width:15%;background:linear-gradient(90deg,#ef5b52,#f2c21a 55%,#6fd08c);transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
-#sessionBox{display:none;flex-direction:column;align-items:center;gap:7px;background:rgba(10,12,16,.4);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:9px 16px;box-shadow:0 8px 24px rgba(0,0,0,.28);backdrop-filter:blur(4px);pointer-events:auto;min-width:200px}
-#sessionTop{display:flex;align-items:center;gap:10px}
-#sessionCode{font-size:11px;letter-spacing:.04em;color:var(--ink-dim);text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap}
+#sessionBox{position:absolute;right:clamp(16px,2.4vw,28px);top:calc(20px + env(safe-area-inset-top,0px));display:none;flex-direction:column;align-items:stretch;gap:8px;background:rgba(10,12,16,.46);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:11px 16px 13px;box-shadow:0 8px 24px rgba(0,0,0,.3);backdrop-filter:blur(4px);z-index:5;min-width:190px;max-width:230px}
+body.free #sessionBox.show{display:flex}
+#sessionTop{display:flex;align-items:center;justify-content:space-between;gap:10px;pointer-events:auto}
+#sessionCodeLbl{font-size:11px;letter-spacing:.04em;color:var(--ink-dim);text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap}
 #sessionCopyBtn{pointer-events:auto;margin:0;padding:3px 11px;font-size:11.5px;border-radius:7px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;white-space:nowrap}
 #sessionCopyBtn:hover{background:rgba(255,255,255,.18)}
 #playersList{display:flex;flex-direction:column;gap:4px;width:100%}
 .pRow{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink-dim);text-shadow:0 1px 3px rgba(0,0,0,.6);white-space:nowrap}
 .pRow.me{color:#fff;font-weight:600}
 .pDot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 6px currentColor}
-.pName{overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.pName{overflow:hidden;text-overflow:ellipsis;max-width:110px}
 .pProg{margin-left:auto;font-size:10.5px;color:var(--ink-faint);letter-spacing:.02em}
 #endWrap{position:absolute;inset:0;background:rgba(5,6,9,.85);display:none;align-items:center;justify-content:center;z-index:40;backdrop-filter:blur(3px)}
 #endWrap.show{display:flex}
@@ -167,14 +169,12 @@ body.free #integrity{display:flex}
   <div id="interactPrompt">Appuie sur <kbd>E</kbd> pour interagir</div>
   <div id="toast"></div>
   <div id="integrity">
-    <div id="hudCard">
-      <span class="lbl" id="integrityLbl">Data center : 15 % sauvé</span>
-      <div class="bar"><i id="integrityBar"></i></div>
-    </div>
-    <div id="sessionBox">
-      <div id="sessionTop"><span id="sessionCodeLbl"></span><button id="sessionCopyBtn" type="button" title="Copier le code de partie">Copier</button></div>
-      <div id="playersList"></div>
-    </div>
+    <span class="lbl" id="integrityLbl">Data center : 15 % sauvé</span>
+    <div class="bar"><i id="integrityBar"></i></div>
+  </div>
+  <div id="sessionBox">
+    <div id="sessionTop"><span id="sessionCodeLbl"></span><button id="sessionCopyBtn" type="button" title="Copier le code de partie">Copier</button></div>
+    <div id="playersList"></div>
   </div>
 </div>
 
@@ -990,49 +990,49 @@ STOPS.forEach(s=>{s.pos=new V3(...s.pos);s.tgt=new V3(...s.tgt);if(s.via)s.via=s
 /* ---------------------------------------------------------------- salles & énigmes historiques */
 const ROOMS=[
  {zone:'sec',pos:STOPS[1].pos.clone(),tgt:STOPS[1].tgt.clone(),room:'Sécurité',accent:'#ef5b52',
-  q:"Quel est le nom du tout premier calculateur électronique universel, mis en service en 1946, si volumineux qu'il occupait une salle entière à lui seul ?",
-  choices:["L'ENIAC","L'Apple II","Le Colossus","L'IBM PC"],correct:0,
-  fact:"L'ENIAC (1946) pesait environ 27 tonnes et occupait près de 167 m² : on peut le voir comme l'ancêtre de tous les data centers. Aujourd'hui, un simple smartphone a largement plus de puissance de calcul que lui."},
+  q:"Qu'est-ce qu'un data center ?",
+  choices:["Un logiciel de stockage en ligne","Un bâtiment qui regroupe des serveurs, du stockage et des équipements réseau","Un câble sous-marin reliant deux continents","Un satellite de télécommunications"],correct:1,
+  fact:"Un data center est un bâtiment entier conçu pour héberger des serveurs, du stockage et des équipements réseau, avec tout ce qu'il faut autour : électricité secourue, climatisation et sécurité."},
  {zone:'hall',pos:STOPS[2].pos.clone(),tgt:STOPS[2].tgt.clone(),room:'Salle informatique',accent:'#6cc7e6',
-  q:"Avec l'explosion d'Internet, dans quelle décennie le terme « data center » commence-t-il à être utilisé couramment ?",
-  choices:["Les années 1960","Les années 1980","Les années 1990","Les années 2010"],correct:2,
-  fact:"C'est dans les années 1990, avec le boom d'Internet et des entreprises « dot-com », que les salles de serveurs se standardisent et prennent largement le nom de « data centers »."},
+  q:"Quelle machine des années 1940, installée dans une salle dédiée, est considérée comme l'ancêtre des data centers ?",
+  choices:["L'Apple I","L'IBM PC","L'ENIAC","Le Minitel"],correct:2,
+  fact:"L'ENIAC (1946) occupait une salle entière à lui seul : on le considère comme l'ancêtre des data centers, bien avant que le terme n'existe."},
  {zone:'hall',pos:STOPS[3].pos.clone(),tgt:STOPS[3].tgt.clone(),room:'Allée froide',accent:'#4da3ff',
-  q:"Quelle entreprise a été pionnière en publiant dès 2008 ses propres mesures de « PUE » (efficacité énergétique de ses data centers), poussant toute l'industrie à documenter et améliorer ses allées froides/chaudes ?",
-  choices:["Google","Yahoo","AOL","Lycos"],correct:0,
-  fact:"À partir de 2008, Google a commencé à publier ses chiffres de PUE (Power Usage Effectiveness). Cette transparence a largement contribué à diffuser les bonnes pratiques de confinement des allées froides et chaudes dans toute l'industrie."},
+  q:"Qui a conçu cette machine (l'ENIAC) ?",
+  choices:["Bill Gates et Paul Allen","Steve Jobs et Steve Wozniak","Tim Berners-Lee","John Mauchly et J. Presper Eckert"],correct:3,
+  fact:"L'ENIAC a été conçu par John Mauchly et J. Presper Eckert. Le data center, lui, n'a pas d'inventeur unique : c'est une invention collective, construite salle après salle."},
  {zone:'hall',pos:STOPS[4].pos.clone(),tgt:STOPS[4].tgt.clone(),room:'Rangée A, baie A-09',accent:'#4da3ff',
-  q:"Le standard des baies 19 pouces, toujours utilisé aujourd'hui dans tous les data centers, est hérité d'une industrie du début du XXe siècle. Laquelle ?",
-  choices:["Les chemins de fer","L'aéronautique","L'automobile","La télévision"],correct:0,
-  fact:"Le format de baie 19 pouces vient des armoires de relais utilisées par les compagnies de chemin de fer pour leurs systèmes de signalisation, au tout début du XXe siècle. Un siècle plus tard, il équipe encore la quasi-totalité des data centers du monde."},
+  q:"Dans quelle décennie les data centers modernes se sont-ils multipliés avec l'essor d'Internet ?",
+  choices:["Les années 1950","Les années 1970","Les années 1990","Les années 2010"],correct:2,
+  fact:"C'est dans les années 1990, avec le boom d'Internet et des entreprises « dot-com », que les salles de serveurs se standardisent et prennent largement le nom de « data centers »."},
  {zone:'hall',pos:STOPS[5].pos.clone(),tgt:STOPS[5].tgt.clone(),room:'Allée chaude',accent:'#ff8a3d',
-  q:"Depuis quelle décennie des data centers revalorisent-ils la chaleur rejetée par leurs serveurs pour chauffer des logements, bureaux ou piscines voisines ?",
-  choices:["Les années 1990","Les années 2000","Les années 2010","Les années 2020"],correct:2,
-  fact:"C'est dans les années 2010 que ces projets de récupération de chaleur se sont multipliés : par exemple, depuis 2017, un data center parisien réchauffe l'eau d'une piscine municipale grâce à la chaleur de ses serveurs."},
+  q:"Combien de data centers compte-t-on environ dans le monde en 2026 ?",
+  choices:["1 200","12 000","120 000","1,2 million"],correct:1,
+  fact:"On en recense environ 12 000 dans le monde en 2026 — un chiffre en forte croissance avec l'essor de l'informatique en nuage et de l'IA."},
  {zone:'hall',pos:STOPS[6].pos.clone(),tgt:STOPS[6].tgt.clone(),room:'Sous le faux plancher',accent:'#9fb6cc',
-  q:"Dans quelle décennie le plancher technique surélevé, aujourd'hui indispensable pour faire circuler l'air froid sous les baies, a-t-il été inventé pour les toutes premières salles d'ordinateurs ?",
-  choices:["Les années 1950","Les années 1970","Les années 1990","Les années 2000"],correct:0,
-  fact:"Le plancher surélevé est inventé dans les années 1950 pour dissimuler et refroidir les câbles et circuits des premiers gros ordinateurs. Sous une forme modernisée, il reste aujourd'hui l'un des piliers du refroidissement des data centers."},
+  q:"Quel pays possède le plus grand nombre de data centers ?",
+  choices:["Les États-Unis","La Chine","L'Allemagne","Le Japon"],correct:0,
+  fact:"Les États-Unis en comptent plus que les 18 pays suivants réunis dans le classement mondial."},
  {zone:'hall',pos:STOPS[7].pos.clone(),tgt:STOPS[7].tgt.clone(),room:'Climatisation (CRAH)',accent:'#4da3ff',
-  q:"Pour profiter du « free cooling » et réduire sa consommation, Facebook a construit l'un de ses plus grands data centers en 2013 près du cercle polaire. Dans quel pays ?",
-  choices:["La Suède","L'Islande","La Norvège","La Finlande"],correct:0,
-  fact:"Le data center de Luleå, en Suède, utilise l'air extérieur presque toute l'année pour refroidir ses serveurs, avec un PUE parmi les meilleurs du monde (environ 1,07)."},
+  q:"Combien y a-t-il environ de data centers en France ?",
+  choices:["35","150","350","3 500"],correct:2,
+  fact:"On recense environ 350 sites en France en 2026, soit deux fois plus qu'en 2017 : le secteur a beaucoup grossi en moins de dix ans."},
  {zone:'mmr',pos:STOPS[8].pos.clone(),tgt:STOPS[8].tgt.clone(),room:'Meet-me room',accent:'#f2c21a',
-  q:"En 1969, un premier message devait être envoyé sur ARPANET (l'ancêtre d'Internet) : le mot « LOGIN ». Le système a planté en cours de transmission. Combien de lettres sont réellement passées ?",
-  choices:["0 lettre","2 lettres","3 lettres","5 lettres"],correct:1,
-  fact:"Seules les lettres « L » et « O » sont arrivées avant que l'ordinateur distant ne plante. Le tout premier « message Internet » de l'histoire fut donc, par accident, « LO »."},
+  q:"Quelle part de l'électricité mondiale les data centers consommaient-ils en 2024 ?",
+  choices:["Environ 1,5 %","Environ 8 %","Environ 15 %","Environ 30 %"],correct:0,
+  fact:"Environ 1,5 % de l'électricité mondiale, soit 415 TWh en 2024 — une part qui grimpe vite avec le développement de l'intelligence artificielle."},
  {zone:'pwr',pos:STOPS[9].pos.clone(),tgt:STOPS[9].tgt.clone(),room:"Local énergie",accent:'#f2c21a',
-  q:"Quel organisme a créé, dans les années 1990, la classification en « Tiers » (I à IV) qui évalue la fiabilité des data centers ?",
-  choices:["L'Uptime Institute","L'ISO","Le CERN","Cisco"],correct:0,
-  fact:"Fondé en 1993, l'Uptime Institute a standardisé cette classification Tier I à IV, toujours une référence mondiale aujourd'hui pour évaluer la disponibilité d'un data center."},
+  q:"Pourquoi les data centers consomment-ils beaucoup d'eau ?",
+  choices:["Pour produire leur propre électricité","Pour nettoyer les salles","Pour alimenter les sanitaires du personnel","Pour refroidir les serveurs"],correct:3,
+  fact:"L'eau sert avant tout à refroidir les serveurs, en complément ou à la place de la climatisation classique — d'où l'intérêt croissant pour le refroidissement liquide et le free cooling."},
  {zone:'ext',pos:STOPS[10].pos.clone(),tgt:STOPS[10].tgt.clone(),room:'Groupes électrogènes',accent:'#e8a64a',
-  q:"Une gigantesque panne de courant a plongé dans le noir environ 50 millions de personnes dans le nord-est des États-Unis et au Canada, rappelant l'importance des groupes électrogènes de secours. En quelle année ?",
-  choices:["1989","1995","2003","2011"],correct:2,
-  fact:"Le 14 août 2003, le « Northeast Blackout » a coupé l'électricité pendant plusieurs heures, voire plusieurs jours par endroits. Ce type d'incident a renforcé l'exigence de redondance électrique dans les data centers."},
+  q:"Quel indicateur mesure l'efficacité énergétique d'un data center ?",
+  choices:["Le DPE","Le PUE","La QoS","La MTU"],correct:1,
+  fact:"Le PUE (Power Usage Effectiveness) compare l'énergie totale consommée à celle utilisée réellement par les serveurs : plus il est proche de 1, plus le data center est efficace."},
  {zone:'noc',pos:STOPS[11].pos.clone(),tgt:STOPS[11].tgt.clone(),room:'Supervision (NOC)',accent:'#8c9cff',
-  q:"Quel bug informatique a mobilisé des armées d'ingénieurs dans les centres de supervision du monde entier, la nuit du 31 décembre 1999 ?",
-  choices:["Le bug de l'an 2000 (Y2K)","Heartbleed","Stuxnet","Le ver Morris"],correct:0,
-  fact:"Par crainte que les systèmes ne confondent 2000 et 1900, des milliers d'ingénieurs ont veillé cette nuit-là partout dans le monde. Les dégâts furent finalement très limités, en grande partie grâce à ce travail de prévention mené dans les deux années précédentes."},
+  q:"Selon l'Agence internationale de l'énergie, comment va évoluer la consommation électrique des data centers d'ici 2030, sous l'effet de l'IA ?",
+  choices:["Elle va plus que doubler","Elle va rester stable","Elle va baisser de moitié","Elle va être multipliée par 10"],correct:0,
+  fact:"Elle devrait dépasser 900 TWh par an d'ici 2030, plus du double d'aujourd'hui — un peu plus que la consommation électrique actuelle du Japon tout entier."},
 ];
 // la vue d'origine de « zoom sur une baie » colle le nez contre la baie (allée large de 1,8 m) : on ne voyait
 // que du métal quoi qu'on fasse. On repart du centre de l'allée, à distance confortable de la rangée A.
@@ -1055,8 +1055,10 @@ function buildRiddleMarker(r){
   const floorLite=new T.PointLight(new T.Color(r.accent).getHex(),.15,.9,2);floorLite.position.set(0,.1,0);grp.add(floorLite);
   return {grp,mat:screenMat,light:lite};
 }
-// porte physique vers la salle suivante : plus de changement de salle aux touches fléchées — il faut s'en
-// approcher et appuyer sur E, et elle ne s'ouvre (visuellement, en vert) qu'une fois la borne de la salle résolue.
+// porte physique vers la salle suivante : même langage visuel que les vraies portes déjà présentes dans le
+// bâtiment (vitre teintée + cadre alu du sas d'accueil et des allées froides) — pas un portail inventé. Elle
+// coulisse vers le haut à l'approche, comme les autres, mais seulement une fois la salle résolue ; sinon elle
+// reste fermée et son voyant de contrôle d'accès reste rouge (comme un vrai lecteur de badge).
 function buildDoor(r,idx){
   const ang=(idx*2.39)%(Math.PI*2);
   const dir=new V3(Math.sin(ang),0,Math.cos(ang));
@@ -1065,23 +1067,23 @@ function buildDoor(r,idx){
   if(zb){pos.x=Math.max(zb.x0+.7,Math.min(zb.x1-.7,pos.x));pos.z=Math.max(zb.z0+.7,Math.min(zb.z1-.7,pos.z));}
   pos.y=r.rpos.y;
   if(r.zone==='hall'&&pos.y>-.3)resolveRowCollision(pos);
-  const grp=new T.Group();grp.position.copy(pos);scene.add(grp);
-  const frameM=std({color:0x2a2e35,roughness:.5,metalness:.6});
-  boxAt(.14,2.3,.14,frameM,-.62,1.15,0,grp);boxAt(.14,2.3,.14,frameM,.62,1.15,0,grp);boxAt(1.4,.14,.14,frameM,0,2.33,0,grp);
-  const [c,ctx]=cvs(64,64);ctx.fillStyle='#fff';ctx.fillRect(0,0,64,64);
-  const panelMat=new T.MeshStandardMaterial({map:tex(c),emissive:new T.Color(0xef5b52),emissiveIntensity:.35,roughness:.5,metalness:.1,side:T.DoubleSide,transparent:true,opacity:.9});
-  plane(1.1,2.1,panelMat,0,1.08,0,0,grp);
-  const lite=new T.PointLight(0xef5b52,.4,2.4,2);lite.position.set(0,1.2,.3);grp.add(lite);
-  let unlocked=null;
-  const setUnlocked=(u)=>{
-    if(u===unlocked)return;unlocked=u;
-    panelMat.color.setHex(u?0x1a2420:0x1a1216);
-    panelMat.emissive.setHex(u?0x6fd08c:0xef5b52);panelMat.emissiveIntensity=u?.6:.35;
-    lite.color.setHex(u?0x6fd08c:0xef5b52);lite.intensity=u?.7:.4;
+  const baseY=pos.y+1.04;
+  const dg=new T.Group();dg.position.set(pos.x,baseY,pos.z);dg.rotation.y=ang;scene.add(dg);
+  const doorMat=std({color:0xbfe0f0,roughness:.05,metalness:.05,transparent:true,opacity:.24,depthWrite:false,side:T.DoubleSide,envMapIntensity:2.2});
+  plane(.92,2.08,doorMat,0,0,0,0,dg);
+  boxAt(.035,2.1,.035,M.alu,-.47,0,.012,dg);boxAt(.035,2.1,.035,M.alu,.47,0,.012,dg);
+  boxAt(.98,.05,.05,M.alu,0,1.06,.012,dg);
+  // lecteur de badge + voyant d'accès (petit détail réaliste, pas un grand aplat de couleur)
+  boxAt(.08,.12,.03,M.glossBlack,.56,.08,.02,dg);
+  const ledMat=basic({color:hdr(0xff4a3c,3)});
+  plane(.05,.05,ledMat,.56,.08,.037,0,dg);
+  dg.visible=false;
+  const doorObj={grp:dg,pos,cx:pos.x,cz:pos.z,baseY,locked:true};
+  doorObj.setUnlocked=(u)=>{
+    if(doorObj.locked===!u)return;doorObj.locked=!u;
+    ledMat.color.copy(hdr(u?0x3be06a:0xff4a3c,3));
   };
-  setUnlocked(false);
-  grp.visible=false;
-  return {grp,pos,setUnlocked};
+  return doorObj;
 }
 const doors=[];
 const AISLE_Z=[-6.5,-3.8,-1.1,1.6,4.3];
@@ -1335,16 +1337,44 @@ function makeNameSprite(text){
   spr.scale.set(1.15,.29,1);spr.position.set(0,.42,0);
   return spr;
 }
+// petit générateur de tête rigolote (grands yeux globuleux, sourire ou langue tirée, accessoire façon
+// moustache/lunettes au hasard) : des bonnes têtes de « personnage de jeu » façon Backrooms/meme, jamais une
+// personnalité réelle — juste de quoi reconnaître facilement chaque joueur et sourire en le croisant.
+function makeFaceTex(id){
+  const [c,x]=cvs(160,160);x.clearRect(0,0,160,160);
+  let h=0;for(let i=0;i<id.length;i++)h=(h*131+id.charCodeAt(i)+7)>>>0;
+  const rnd=()=>{h^=h<<13;h>>>=0;h^=h>>>17;h^=h<<5;h>>>=0;return (h%10000)/10000;};
+  const eyeY=58+rnd()*10,eyeDx=24+rnd()*8,eyeR=13+rnd()*7;
+  for(const side of [-1,1]){
+    x.beginPath();x.fillStyle='#fff';x.ellipse(80+side*eyeDx,eyeY,eyeR,eyeR*1.15,0,0,6.283);x.fill();
+    const pr=eyeR*.5;
+    x.beginPath();x.fillStyle='#181a20';x.ellipse(80+side*eyeDx+side*(rnd()*4-2),eyeY+(rnd()*4-2),pr,pr,0,0,6.283);x.fill();
+    x.beginPath();x.fillStyle='#fff';x.arc(80+side*eyeDx-pr*.35,eyeY-pr*.35,pr*.32,0,6.283);x.fill();
+  }
+  x.strokeStyle='#2b2016';x.lineWidth=5;x.lineCap='round';
+  const browTilt=(rnd()-.5)*18;
+  for(const side of [-1,1]){x.beginPath();x.moveTo(80+side*(eyeDx-12),eyeY-eyeR-10);x.lineTo(80+side*(eyeDx+12),eyeY-eyeR-10-side*browTilt);x.stroke();}
+  const mouthType=Math.floor(rnd()*3);
+  if(mouthType===0){x.strokeStyle='#5a2a20';x.lineWidth=5;x.beginPath();x.arc(80,108,22,.12*Math.PI,.88*Math.PI);x.stroke();x.fillStyle='#fff';x.fillRect(62,108,36,7);}
+  else if(mouthType===1){x.fillStyle='#5a2a20';x.beginPath();x.ellipse(80,112,11,15,0,0,6.283);x.fill();x.fillStyle='#e8847a';x.beginPath();x.ellipse(80,121,5,9,0,0,6.283);x.fill();}
+  else{x.strokeStyle='#5a2a20';x.lineWidth=5;x.beginPath();x.moveTo(56,104);x.quadraticCurveTo(80,126,104,104);x.stroke();}
+  if(rnd()<.4){x.strokeStyle='#2b2016';x.lineWidth=8;x.lineCap='round';x.beginPath();x.moveTo(50,94);x.quadraticCurveTo(80,104,110,94);x.stroke();}
+  else if(rnd()<.7){x.strokeStyle='#141414';x.lineWidth=6;x.beginPath();x.moveTo(50,eyeY-2);x.lineTo(110,eyeY-2);x.stroke();
+    for(const side of [-1,1]){x.beginPath();x.ellipse(80+side*eyeDx,eyeY-2,eyeR+4,eyeR*.9,0,0,6.283);x.stroke();}}
+  return tex(c,{srgb:false});
+}
 // avatar des autres joueurs : silhouette arrondie (cylindres fuselés + sphères) plutôt que des pavés bruts
 // façon « blocs » — mêmes repères verticaux que l'ancienne version (tête, torse, hanches, jambes, chaussures)
-// pour ne pas dérégler la façon dont elle se voit, mais avec des formes bien plus douces et « habillées ».
+// pour ne pas dérégler la façon dont elle se voit, mais avec des formes bien plus douces et « habillées », et
+// une vraie tête de personnage rigolo plutôt qu'une boule de couleur unie.
 function buildRemoteAvatar(id,name){
   const g=new T.Group();
   const col=colorForId(id);
-  const cloth=std({color:col,roughness:.55,metalness:.1}),skin=std({color:0xd9a876,roughness:.7}),shoe=std({color:0x15161a,roughness:.45,metalness:.1}),hair=std({color:0x20232b,roughness:.75});
-  // tête ronde + petite calotte façon cheveux courts
+  const cloth=std({color:col,roughness:.55,metalness:.1}),skin=std({color:0xd9a876,roughness:.7}),shoe=std({color:0x15161a,roughness:.45,metalness:.1});
+  // tête ronde avec un visage rigolo appliqué dessus, comme une petite affiche collée sur la sphère
   add(new T.SphereGeometry(.155,20,16),skin,0,.08,0,g);
-  add(new T.SphereGeometry(.16,20,16,0,6.283,0,1.65),hair,0,.1,0,g);
+  const faceMat=new T.MeshBasicMaterial({map:makeFaceTex(id),transparent:true,depthWrite:false});
+  plane(.3,.3,faceMat,0,.1,.148,0,g);
   cyl(.045,.055,.1,10,skin,0,-.1,0,g);
   // torse fuselé, épaules arrondies
   add(new T.SphereGeometry(.21,16,12),cloth,0,-.2,0,g);
@@ -1382,8 +1412,8 @@ function updateRemotePlayers(dt){
 function genCode(){const C='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<4;i++)s+=C[Math.floor(Math.random()*C.length)];return s;}
 function renderSessionLabel(){
   const box=$('sessionBox');
-  if(!sessionCode){box.style.display='none';return;}
-  box.style.display='flex';
+  if(!sessionCode){box.classList.remove('show');return;}
+  box.classList.add('show');
   const now=Date.now();
   const people=Object.values(players).filter(p=>now-p.ts<20000);
   if(!people.find(p=>p.id===playerId))people.push({id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded});
@@ -1549,6 +1579,15 @@ function updateDoors(dt){
     const dist=Math.hypot(p.x-d.cx,p.z-d.cz);
     const open=dist<1.35;
     const targetY=d.baseY+(open?2.15:0);
+    d.grp.position.y+=(targetY-d.grp.position.y)*Math.min(1,dt*5);
+  }
+  // portes de salle : même mécanique de coulissement que les portes vitrées ci-dessus, mais verrouillées
+  // (elles restent fermées) tant que la borne de la salle n'est pas résolue.
+  for(const d of doors){
+    if(!d||!d.grp.visible)continue;
+    const dist=Math.hypot(p.x-d.cx,p.z-d.cz);
+    const open=!d.locked&&dist<1.6;
+    const targetY=d.baseY+(open?2.1:0);
     d.grp.position.y+=(targetY-d.grp.position.y)*Math.min(1,dt*5);
   }
 }
