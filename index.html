@@ -147,7 +147,7 @@ body.free #integrity{display:flex}
   <div id="explCount"></div>
   <div id="interactPrompt">Appuie sur <kbd>E</kbd> pour interagir</div>
   <div id="toast"></div>
-  <div id="integrity"><span class="lbl" id="integrityLbl">Data center : 15 % sauvé</span><div class="bar"><i id="integrityBar"></i></div><span class="lbl" id="sessionLbl"></span></div>
+  <div id="integrity"><span class="lbl" id="integrityLbl">Data center : 15 % sauvé</span><div class="bar"><i id="integrityBar"></i></div><span class="lbl" id="sessionLbl"></span><button id="sessionCopyBtn" type="button" title="Copier le code de partie" style="display:none;margin-left:8px;padding:2px 10px;font-size:.85em;border-radius:6px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;opacity:.85">Copier le code</button></div>
 </div>
 
 <div id="modalWrap">
@@ -200,6 +200,7 @@ body.free #integrity{display:flex}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
@@ -995,9 +996,9 @@ const ROOMS=[
 {const rm=ROOMS[3];rm.pos=new V3(.26,1.5,-6.5);rm.tgt=new V3(0,1.1,-7.9);}
 function buildRiddleMarker(r){
   const grp=new T.Group();grp.position.copy(r.rpos);scene.add(grp);
-  // anneau lumineux posé au sol, bien visible depuis loin
-  const ring=add(new T.RingGeometry(.3,.4,32),new T.MeshBasicMaterial({color:new T.Color(r.accent),transparent:true,opacity:.9,side:T.DoubleSide,depthWrite:false}),0,.015,0,grp);ring.rotation.x=-Math.PI/2;
-  const ring2=add(new T.RingGeometry(.46,.5,32),new T.MeshBasicMaterial({color:new T.Color(r.accent),transparent:true,opacity:.4,side:T.DoubleSide,depthWrite:false}),0,.012,0,grp);ring2.rotation.x=-Math.PI/2;
+  // anneau discret posé au sol : repérable de près, mais il ne doit pas se voir comme un phare depuis l'autre bout de la salle
+  const ring=add(new T.RingGeometry(.22,.29,32),new T.MeshBasicMaterial({color:new T.Color(r.accent),transparent:true,opacity:.5,side:T.DoubleSide,depthWrite:false}),0,.015,0,grp);ring.rotation.x=-Math.PI/2;
+  const ring2=add(new T.RingGeometry(.34,.37,32),new T.MeshBasicMaterial({color:new T.Color(r.accent),transparent:true,opacity:.2,side:T.DoubleSide,depthWrite:false}),0,.012,0,grp);ring2.rotation.x=-Math.PI/2;
   cyl(.2,.24,.06,20,std({color:0x1a1d22,roughness:.6,metalness:.3}),0,.03,0,grp);
   cyl(.03,.03,.58,10,std({color:0x2a2e35,roughness:.5,metalness:.55}),0,.34,0,grp);
   const [c,ctx]=cvs(256,256);
@@ -1005,17 +1006,22 @@ function buildRiddleMarker(r){
   ctx.strokeStyle=r.accent;ctx.lineWidth=10;ctx.strokeRect(5,5,246,246);
   ctx.fillStyle=r.accent;ctx.font='700 148px Barlow, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText('?',128,142);
-  const screenMat=new T.MeshStandardMaterial({map:tex(c),emissive:new T.Color(r.accent),emissiveIntensity:.5,roughness:.5,side:T.DoubleSide});
+  const screenMat=new T.MeshStandardMaterial({map:tex(c),emissive:new T.Color(r.accent),emissiveIntensity:.3,roughness:.5,side:T.DoubleSide});
   plane(.4,.4,screenMat,0,.68,0,0,grp);
-  const lite=new T.PointLight(new T.Color(r.accent).getHex(),.55,3,2);lite.position.set(0,.72,.18);grp.add(lite);
-  const floorLite=new T.PointLight(new T.Color(r.accent).getHex(),.4,1.6,2);floorLite.position.set(0,.1,0);grp.add(floorLite);
+  const lite=new T.PointLight(new T.Color(r.accent).getHex(),.22,1.8,2);lite.position.set(0,.72,.18);grp.add(lite);
+  const floorLite=new T.PointLight(new T.Color(r.accent).getHex(),.15,.9,2);floorLite.position.set(0,.1,0);grp.add(floorLite);
   return {grp,mat:screenMat,light:lite};
 }
 const AISLE_Z=[-6.5,-3.8,-1.1,1.6,4.3];
 function nearestAisleZ(z){return AISLE_Z.reduce((a,b)=>Math.abs(b-z)<Math.abs(a-z)?b:a);}
 ROOMS.forEach((r,idx)=>{
   const isHallFloor=r.zone==='hall'&&r.pos.y>=.2;
-  if(idx===0){
+  if(r.zone==='noc'){
+    // le calcul générique plaçait cette borne sous l'estrade des bureaux (idx 10) : elle était bien là, mais
+    // engloutie dans le socle surélevé — totalement invisible. On la pose à la place dans l'allée dégagée
+    // entre l'entrée et l'écran mural, à l'écart de l'estrade et des bureaux.
+    r.rpos=new V3(N.x-3,0,N.z-3);
+  }else if(idx===0){
     const dir=r.tgt.clone().sub(r.pos);dir.y=0;if(dir.lengthSq()<1e-6)dir.set(0,0,-1);dir.normalize();
     const dist=Math.max(1.7,Math.min(3.2,r.pos.distanceTo(r.tgt)*.55));
     r.rpos=r.pos.clone().addScaledVector(dir,dist);
@@ -1175,36 +1181,68 @@ function closeRiddle(){riddleOpen=false;$('modalWrap').classList.remove('show');
 $('mClose').addEventListener('click',closeRiddle);
 /* ---------------------------------------------------------------- fin de partie & classement */
 const hasStorage=typeof window.storage!=='undefined';
-/* ---------------------------------------------------------------- même partie, en solo chacun (code de session) */
+/* ---------------------------------------------------------------- vrai multijoueur en ligne (code de partie) */
+// window.storage ne fonctionne que dans l'aperçu claude.ai/artifact : une fois déployé (Vercel, GitHub Pages…),
+// il n'existe plus et les joueurs sur d'autres PC ne pouvaient pas se voir. On passe par un vrai service en
+// ligne accessible depuis n'importe quel navigateur : un petit courtier MQTT public, via WebSocket, sans
+// backend à héberger. Chaque joueur publie son état (retenu) sur un sujet propre à son code de partie, et
+// tous les joueurs du même code s'y abonnent : ça marche pareil en local, sur l'aperçu ou en ligne.
+const MQTT_WS_URL='wss://broker.hivemq.com:8884/mqtt';
+const MQTT_NS='dctour/v3';
 let playerId=Math.random().toString(36).slice(2,9);
+let mqttClient=null,mqttOnline=false,players={};
 function genCode(){const C='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<4;i++)s+=C[Math.floor(Math.random()*C.length)];return s;}
-function sessKey(){return 'session:'+sessionCode;}
-async function fetchSession(){
-  try{const res=await window.storage.get(sessKey(),true);return res&&res.value?JSON.parse(res.value):null;}catch(e){return null;}
-}
-async function writeSession(doc){try{await window.storage.set(sessKey(),JSON.stringify(doc),true);}catch(e){}}
-function renderSessionLabel(doc){
+function renderSessionLabel(){
   if(!sessionCode){$('sessionLbl').textContent='';return;}
-  const people=Object.values((doc&&doc.players)||{});
-  const n=people.length||1;
+  const now=Date.now();
+  const people=Object.values(players).filter(p=>now-p.ts<20000);
+  if(!people.find(p=>p.id===playerId))people.push({id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded});
+  const n=people.length;
   const others=people.filter(p=>p.id!==playerId).map(p=>`${p.name} ${p.solved}/${ROOMS.length}${p.done?' ✓':''}`);
-  $('sessionLbl').textContent=`Code : ${sessionCode} — ${n} joueur${n>1?'s':''}`+(others.length?' · '+others.join(' · '):'');
+  const status=mqttOnline?'':' (connexion…)';
+  $('sessionLbl').textContent=`Code : ${sessionCode} — ${n} joueur${n>1?'s':''}${status}`+(others.length?' · '+others.join(' · '):'');
+  const cb=$('sessionCopyBtn');if(cb)cb.style.display='inline-block';
+}
+function publishProgress(){
+  if(!mqttClient||!mqttOnline||!sessionCode)return;
+  const payload=JSON.stringify({id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded,ts:Date.now()});
+  try{mqttClient.publish(`${MQTT_NS}/${sessionCode}/${playerId}`,payload,{retain:true,qos:0});}catch(e){}
 }
 async function pushProgress(){
-  if(!hasStorage||!sessionCode)return;
-  const doc=await fetchSession()||{players:{}};
-  if(!doc.players)doc.players={};
-  doc.players[playerId]={id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded};
-  await writeSession(doc);
-  renderSessionLabel(doc);
+  if(!sessionCode)return;
+  players[playerId]={id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded,ts:Date.now()};
+  publishProgress();
+  renderSessionLabel();
 }
 async function initSession(code){
   sessionCode=(code||'').trim().toUpperCase().slice(0,6);
-  if(!hasStorage){sessionCode='';return;}
+  const isNew=!sessionCode;
   if(!sessionCode)sessionCode=genCode();
-  await pushProgress();
+  players={};
+  renderSessionLabel();
+  if(typeof mqtt==='undefined'){showToast('Multijoueur indisponible (bibliothèque non chargée) — tu joues en solo.',6000);sessionReady=true;return;}
+  try{
+    mqttClient=mqtt.connect(MQTT_WS_URL,{clientId:'dctour-'+playerId+'-'+Date.now(),reconnectPeriod:3000,connectTimeout:8000});
+    mqttClient.on('connect',()=>{
+      mqttOnline=true;
+      mqttClient.subscribe(`${MQTT_NS}/${sessionCode}/+`);
+      pushProgress();
+      showToast(isNew?`Partie créée — code ${sessionCode}. Partage-le pour jouer ensemble !`:`Connecté à la partie ${sessionCode}.`,7000);
+      renderSessionLabel();
+    });
+    mqttClient.on('reconnect',()=>{mqttOnline=false;renderSessionLabel();});
+    mqttClient.on('close',()=>{mqttOnline=false;renderSessionLabel();});
+    mqttClient.on('error',()=>{mqttOnline=false;});
+    mqttClient.on('message',(topic,msg)=>{
+      try{
+        const data=JSON.parse(msg.toString());
+        if(data&&data.id)players[data.id]={...data,ts:Date.now()};
+        renderSessionLabel();
+      }catch(e){}
+    });
+  }catch(e){showToast('Multijoueur indisponible — tu joues en solo.',6000);}
   sessionReady=true;
-  pollTimer=setInterval(async()=>{if(exploring){const d=await fetchSession();renderSessionLabel(d);}},5000);
+  pollTimer=setInterval(()=>{if(exploring){publishProgress();renderSessionLabel();}},4000);
 }
 async function loadLeaderboard(){
   if(!hasStorage)return [];
@@ -1328,6 +1366,13 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;
 requestAnimationFrame(loop);
 setTimeout(()=>{fadeEl.style.opacity=0;},200);
 setStatus('');goBtn.disabled=false;goBtn.textContent='Commencer la visite';goBtn.focus();
+const sessionCopyBtn=$('sessionCopyBtn');
+if(sessionCopyBtn)sessionCopyBtn.addEventListener('click',()=>{
+  if(!sessionCode)return;
+  const done=()=>showToast(`Code ${sessionCode} copié !`,2500);
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(sessionCode).then(done).catch(done);
+  else done();
+});
 goBtn.addEventListener('click',()=>{
   playerName=($('pseudoInput').value||'').trim().slice(0,18)||'Joueur';
   initSession($('codeInput').value);
