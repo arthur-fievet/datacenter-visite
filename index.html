@@ -1631,7 +1631,10 @@ async function initSession(code){
           if(typeof data.x==='number'){rp.target.set(data.x,data.y,data.z);rp.yawTarget=data.yaw||0;
             if(!rp.placed){rp.grp.position.copy(rp.target);rp.yaw=rp.yawTarget;rp.scale=rp.underfloor?UNDER_AVATAR_SCALE:1;rp.grp.scale.setScalar(rp.scale);rp.placed=true;}}
         }
-        renderSessionLabel();
+        // pas de renderSessionLabel() ici : avec beaucoup de joueurs, chacun publie ~5 fois/seconde, donc
+        // reconstruire toute la liste (DOM) à chaque message reçu de chacun d'eux fait vite des dizaines de
+        // rebuilds par seconde et sature le thread principal. Le pollTimer ci-dessous rafraîchit déjà la
+        // liste 5 fois/seconde, bien assez pour un affichage qui reste à jour sans faire ce travail en double.
       }catch(e){}
     });
   }catch(e){showToast('Multijoueur indisponible — tu joues en solo.',6000);}
