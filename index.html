@@ -87,6 +87,13 @@ body.free #explCount{display:block}
 #pseudoWrap label{font-size:12.5px;color:var(--ink-dim);letter-spacing:.02em}
 #pseudoInput{width:min(260px,70vw);text-align:center;background:#1b1e25;border:1px solid rgba(255,255,255,.18);color:#fff;padding:10px 14px;border-radius:10px;font-size:15px;font-family:inherit}
 #pseudoInput:focus{outline:none;border-color:var(--accent)}
+#customizeWrap{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:4px}
+#customRow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center}
+#faceCanvas{width:56px;height:56px;border-radius:50%;background:#1b1e25;border:1px solid rgba(255,255,255,.18)}
+#rerollFaceBtn{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:#1b1e25;color:#fff;cursor:pointer;font-size:12.5px;white-space:nowrap;font-family:inherit}
+#colorSwatches{display:flex;gap:7px}
+.swatch{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.25);cursor:pointer;padding:0}
+.swatch.sel{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.3)}
 /* HUD réparti sur l'écran plutôt qu'empilé au même endroit : % sauvé en haut à gauche, salle/bornes au centre
    (#explCount, inchangé), code de partie + joueurs en haut à droite — plus aucun chevauchement de texte. */
 #integrity{position:absolute;left:clamp(16px,2.4vw,28px);top:calc(20px + env(safe-area-inset-top,0px));display:none;flex-direction:column;align-items:flex-start;gap:7px;z-index:5;pointer-events:none;background:rgba(10,12,16,.46);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:11px 18px 13px;box-shadow:0 8px 24px rgba(0,0,0,.3);backdrop-filter:blur(4px);max-width:220px}
@@ -218,6 +225,14 @@ body.free #sessionBox.show{display:flex}
       <div style="display:flex;gap:8px;align-items:center">
         <input id="codeInput" type="text" maxlength="6" placeholder="ex. NDC4" autocomplete="off" style="text-transform:uppercase">
         <button id="genCodeBtn" type="button" title="Générer un nouveau code" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:#1b1e25;color:#fff;cursor:pointer;font-size:13px;white-space:nowrap">🔄 Nouveau code</button>
+      </div>
+      <div id="customizeWrap">
+        <label>Personnalise ton personnage (visible par les autres joueurs)</label>
+        <div id="customRow">
+          <canvas id="faceCanvas" width="160" height="160" title="Ton visage"></canvas>
+          <button id="rerollFaceBtn" type="button">🔀 Nouveau visage</button>
+          <div id="colorSwatches"></div>
+        </div>
       </div>
     </div>
     <button id="go" disabled>Préparation de la visite…</button>
@@ -1306,17 +1321,35 @@ const GRAVITY=11,JUMP_VEL=4.1;
 // quand on regarde en haut/bas) ; on le voit en baissant les yeux, comme une vraie personne. Formes arrondies
 // (cylindres fuselés + sphères) plutôt que des pavés bruts : on garde les mêmes repères verticaux que l'ancienne
 // version pour ne pas dérégler l'angle de vue qui le rend visible.
-function buildBody(){
+// chaque jambe est désormais un pivot (articulation à la hanche) plutôt qu'une forme fixe, pour pouvoir la
+// faire pivoter en marchant (animateWalk, plus bas) ; mêmes offsets qu'avant, juste réexprimés depuis la hanche.
+function buildBody(color){
   const g=new T.Group();
-  const cloth=std({color:0x30343b,roughness:.8,metalness:.08}),shoe=std({color:0x15161a,roughness:.45,metalness:.12});
+  const cloth=std({color:color!=null?color:0x30343b,roughness:.8,metalness:.08}),shoe=std({color:0x15161a,roughness:.45,metalness:.12});
   cyl(.19,.16,.26,14,cloth,0,-.75,0,g);
+  const limbs={};
   for(const side of [-1,1]){
-    cyl(.1,.08,.78,12,cloth,side*.1,-1.17,0,g);
-    const sh=add(new T.SphereGeometry(.1,10,8),shoe,side*.1,-1.56,-.06,g);sh.scale.set(1.25,.55,1.7);
+    const piv=new T.Group();piv.position.set(side*.1,-.75,0);g.add(piv);
+    cyl(.1,.08,.78,12,cloth,0,-.42,0,piv);
+    const sh=add(new T.SphereGeometry(.1,10,8),shoe,0,-.81,-.06,piv);sh.scale.set(1.25,.55,1.7);
+    limbs[side<0?'legL':'legR']=piv;
   }
-  g.visible=false;scene.add(g);return g;
+  g.visible=false;scene.add(g);g.limbs=limbs;g.clothMat=cloth;return g;
+}
+// anime une marche simple (jambes en ciseaux, bras en balancier opposé) à partir d'un simple indicateur
+// « en mouvement » — pas de squelette ici, juste quelques pivots qu'on fait osciller.
+function animateWalk(limbs,dt,moving,w){
+  if(!limbs)return;
+  w.amp+=((moving?1:0)-w.amp)*Math.min(1,dt*6);
+  if(w.amp>.01)w.phase+=dt*7.2;
+  const leg=Math.sin(w.phase)*.5*w.amp,arm=Math.sin(w.phase)*.38*w.amp;
+  if(limbs.legL)limbs.legL.rotation.x=leg;
+  if(limbs.legR)limbs.legR.rotation.x=-leg;
+  if(limbs.armL)limbs.armL.rotation.x=-arm;
+  if(limbs.armR)limbs.armR.rotation.x=arm;
 }
 const playerBody=buildBody();
+let bodyWalk={phase:0,amp:0};
 function enterFree(){
   anim=null;fadeEl.style.opacity=0;
   if(!freeMode){freeMode=true;document.body.classList.add('free');HUD_HIDE_IDS.forEach(id=>{const el=$(id);if(el)el.style.display='none';});}
@@ -1333,7 +1366,8 @@ function updateFree(dt){
   // sol, donnait l'impression de courir à toute vitesse)
   const spd=(underfloor?(fkeys.sprint?2.3:1.1):(fkeys.sprint?6.2:3.1))*dt;_mv.set(0,0,0);
   if(fkeys.f)_mv.add(_fwd);if(fkeys.b)_mv.sub(_fwd);if(fkeys.r)_mv.add(_rgt);if(fkeys.l)_mv.sub(_rgt);
-  if(_mv.lengthSq()>1e-6){_mv.normalize().multiplyScalar(spd);camera.position.x+=_mv.x;camera.position.z+=_mv.z;}
+  const isMoving=_mv.lengthSq()>1e-6;
+  if(isMoving){_mv.normalize().multiplyScalar(spd);camera.position.x+=_mv.x;camera.position.z+=_mv.z;}
   if(exploring&&roomIdx>=0){
     const z=ROOMS[roomIdx].zone;clampToZone(z);
     if(z==='hall'){
@@ -1383,6 +1417,7 @@ function updateFree(dt){
     else ip.classList.remove('show');
     // le corps ne se voit pas dans le vide étroit sous le faux plancher (on y rampe, accroupi)
     playerBody.visible=!underfloor;
+    animateWalk(playerBody.limbs,dt,isMoving,bodyWalk);
     if(!underfloor){
       // le corps est légèrement avancé par rapport aux yeux (comme un vrai corps), sinon il faut regarder
       // presque à la verticale pour l'apercevoir — en le décalant vers l'avant, un simple coup d'œil vers le bas suffit
@@ -1473,10 +1508,20 @@ const hasStorage=typeof window.storage!=='undefined';
 const MQTT_WS_URL='wss://broker.hivemq.com:8884/mqtt';
 const MQTT_NS='dctour/v4';
 let playerId=Math.random().toString(36).slice(2,9);
+// personnalisation du personnage (couleur de tenue + visage) : choisie dans le menu d'accueil, mémorisée sur
+// cet appareil (localStorage) et envoyée aux autres joueurs avec la position pour qu'ils la voient aussi.
+const CUSTOM_COLORS=[0xef5b52,0xf2a53d,0xf2c21a,0x6fd08c,0x2bb3c0,0x4da3ff,0x8a6fe0,0xe85ea0];
+let customColor=null,customFaceSeed=null;
+try{
+  const savedCustom=JSON.parse(localStorage.getItem('dctour_custom')||'null');
+  if(savedCustom){if(savedCustom.color!=null)customColor=savedCustom.color;if(savedCustom.face)customFaceSeed=savedCustom.face;}
+}catch(e){}
+function saveCustom(){try{localStorage.setItem('dctour_custom',JSON.stringify({color:customColor,face:customFaceSeed}));}catch(e){}}
 let mqttClient=null,mqttOnline=false,players={};
 /* avatars des autres joueurs, visibles en direct dans la scène (même mécanisme que le corps du joueur) */
 const remotePlayers={};
 function colorForId(id){let h=0;for(let i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))>>>0;return new T.Color().setHSL((h%360)/360,.7,.55).getHex();}
+function colorForPlayer(p){return (p&&p.color!=null)?p.color:colorForId(p.id);}
 function makeNameSprite(text){
   const [c,x]=cvs(256,64);
   x.font=`600 30px ${FB}`;x.textAlign='center';x.textBaseline='middle';
@@ -1491,8 +1536,7 @@ function makeNameSprite(text){
 // petit générateur de tête rigolote (grands yeux globuleux, sourire ou langue tirée, accessoire façon
 // moustache/lunettes au hasard) : des bonnes têtes de « personnage de jeu » façon Backrooms/meme, jamais une
 // personnalité réelle — juste de quoi reconnaître facilement chaque joueur et sourire en le croisant.
-function makeFaceTex(id){
-  const [c,x]=cvs(160,160);x.clearRect(0,0,160,160);
+function drawFaceOn(x,id){
   let h=0;for(let i=0;i<id.length;i++)h=(h*131+id.charCodeAt(i)+7)>>>0;
   const rnd=()=>{h^=h<<13;h>>>=0;h^=h>>>17;h^=h<<5;h>>>=0;return (h%10000)/10000;};
   const eyeY=58+rnd()*10,eyeDx=24+rnd()*8,eyeR=13+rnd()*7;
@@ -1512,19 +1556,22 @@ function makeFaceTex(id){
   if(rnd()<.4){x.strokeStyle='#2b2016';x.lineWidth=8;x.lineCap='round';x.beginPath();x.moveTo(50,94);x.quadraticCurveTo(80,104,110,94);x.stroke();}
   else if(rnd()<.7){x.strokeStyle='#141414';x.lineWidth=6;x.beginPath();x.moveTo(50,eyeY-2);x.lineTo(110,eyeY-2);x.stroke();
     for(const side of [-1,1]){x.beginPath();x.ellipse(80+side*eyeDx,eyeY-2,eyeR+4,eyeR*.9,0,0,6.283);x.stroke();}}
+}
+function makeFaceTex(id){
+  const [c,x]=cvs(160,160);x.clearRect(0,0,160,160);drawFaceOn(x,id);
   return tex(c,{srgb:false});
 }
 // avatar des autres joueurs : silhouette arrondie (cylindres fuselés + sphères) plutôt que des pavés bruts
 // façon « blocs » — mêmes repères verticaux que l'ancienne version (tête, torse, hanches, jambes, chaussures)
 // pour ne pas dérégler la façon dont elle se voit, mais avec des formes bien plus douces et « habillées », et
 // une vraie tête de personnage rigolo plutôt qu'une boule de couleur unie.
-function buildRemoteAvatar(id,name){
+function buildRemoteAvatar(id,name,color,faceSeed){
   const g=new T.Group();
-  const col=colorForId(id);
+  const col=color!=null?color:colorForId(id);
   const cloth=std({color:col,roughness:.55,metalness:.1}),skin=std({color:0xd9a876,roughness:.7}),shoe=std({color:0x15161a,roughness:.45,metalness:.1});
   // tête ronde avec un visage rigolo appliqué dessus, comme une petite affiche collée sur la sphère
   add(new T.SphereGeometry(.155,20,16),skin,0,.08,0,g);
-  const faceMat=new T.MeshBasicMaterial({map:makeFaceTex(id),transparent:true,depthWrite:false});
+  const faceMat=new T.MeshBasicMaterial({map:makeFaceTex(faceSeed||id),transparent:true,depthWrite:false});
   plane(.3,.3,faceMat,0,.1,.148,0,g);
   cyl(.045,.055,.1,10,skin,0,-.1,0,g);
   // torse fuselé, épaules arrondies
@@ -1532,19 +1579,24 @@ function buildRemoteAvatar(id,name){
   cyl(.19,.15,.42,16,cloth,0,-.45,0,g);
   // hanches
   cyl(.15,.13,.22,14,cloth,0,-.76,0,g);
-  // bras : épaule ronde + bras fuselé + main
+  // bras et jambes : chaque membre est un pivot (épaule / hanche) qu'animateWalk fait osciller en marchant
+  const limbs={};
   for(const side of [-1,1]){
     add(new T.SphereGeometry(.09,12,10),cloth,side*.26,-.26,0,g);
-    cyl(.075,.05,.5,10,cloth,side*.26,-.52,0,g);
-    add(new T.SphereGeometry(.055,10,8),skin,side*.26,-.78,0,g);
+    const piv=new T.Group();piv.position.set(side*.26,-.26,0);g.add(piv);
+    cyl(.075,.05,.5,10,cloth,0,-.26,0,piv);
+    add(new T.SphereGeometry(.055,10,8),skin,0,-.52,0,piv);
+    limbs[side<0?'armL':'armR']=piv;
   }
-  // jambes fuselées + chaussures
   for(const side of [-1,1]){
-    cyl(.1,.08,.78,12,cloth,side*.1,-1.17,0,g);
-    const sh=add(new T.SphereGeometry(.1,10,8),shoe,side*.1,-1.56,.04,g);sh.scale.set(1.25,.55,1.7);
+    const piv=new T.Group();piv.position.set(side*.1,-.76,0);g.add(piv);
+    cyl(.1,.08,.78,12,cloth,0,-.41,0,piv);
+    const sh=add(new T.SphereGeometry(.1,10,8),shoe,0,-.8,.04,piv);sh.scale.set(1.25,.55,1.7);
+    limbs[side<0?'legL':'legR']=piv;
   }
   g.add(makeNameSprite(name));
   g.visible=false;scene.add(g);
+  g.limbs=limbs;g.clothMat=cloth;g.faceMat=faceMat;
   return g;
 }
 // sous le faux plancher, la silhouette (taille humaine normale) est bien trop grande pour le vide sanitaire
@@ -1564,6 +1616,7 @@ function updateRemotePlayers(dt){
       const targetScale=rp.underfloor?UNDER_AVATAR_SCALE:1;
       rp.scale+=(targetScale-rp.scale)*Math.min(1,dt*8);
       rp.grp.scale.setScalar(rp.scale);
+      animateWalk(rp.grp.limbs,dt,now<rp.movingUntil,rp.walk);
     }
   }
 }
@@ -1574,14 +1627,14 @@ function renderSessionLabel(){
   box.classList.add('show');
   const now=Date.now();
   const people=Object.values(players).filter(p=>now-p.ts<20000);
-  if(!people.find(p=>p.id===playerId))people.push({id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded});
+  if(!people.find(p=>p.id===playerId))people.push({id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded,color:customColor});
   people.sort((a,b)=>(a.id===playerId?-1:b.id===playerId?1:0)||b.solved-a.solved);
   const status=mqttOnline?'':' (connexion…)';
   $('sessionCodeLbl').textContent=`Code ${sessionCode}${status} · ${people.length} joueur${people.length>1?'s':''}`;
   const pl=$('playersList');pl.innerHTML='';
   people.forEach(p=>{
     const row=document.createElement('div');row.className='pRow'+(p.id===playerId?' me':'');
-    const hex=new T.Color(colorForId(p.id)).getHexString();
+    const hex=new T.Color(colorForPlayer(p)).getHexString();
     row.innerHTML=`<i class="pDot" style="background:#${hex};color:#${hex}"></i><span class="pName">${p.name}${p.id===playerId?' (toi)':''}</span><span class="pProg">${p.solved}/${ROOMS.length}${p.done?' ✓':''}</span>`;
     pl.appendChild(row);
   });
@@ -1591,12 +1644,12 @@ function publishProgress(){
   if(!mqttClient||!mqttOnline||!sessionCode)return;
   const p=camera.position;
   const payload=JSON.stringify({id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded,
-    exploring,underfloor,x:+p.x.toFixed(2),y:+p.y.toFixed(2),z:+p.z.toFixed(2),yaw:+yaw.toFixed(3),ts:Date.now()});
+    exploring,underfloor,color:customColor,face:customFaceSeed,x:+p.x.toFixed(2),y:+p.y.toFixed(2),z:+p.z.toFixed(2),yaw:+yaw.toFixed(3),ts:Date.now()});
   try{mqttClient.publish(`${MQTT_NS}/${sessionCode}/${playerId}`,payload,{retain:true,qos:0});}catch(e){}
 }
 async function pushProgress(){
   if(!sessionCode)return;
-  players[playerId]={id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded,ts:Date.now()};
+  players[playerId]={id:playerId,name:playerName,solved:ROOMS.filter(x=>x.solved).length,errors:gameErrors,done:gameEnded,color:customColor,ts:Date.now()};
   publishProgress();
   renderSessionLabel();
 }
@@ -1626,10 +1679,16 @@ async function initSession(code){
         players[data.id]={...data,ts:Date.now()};
         if(data.id!==playerId){
           let rp=remotePlayers[data.id];
-          if(!rp){rp=remotePlayers[data.id]={grp:buildRemoteAvatar(data.id,data.name||'Joueur'),target:new V3(),yaw:0,yawTarget:0,show:false,scale:1};scene.add(rp.grp);}
+          if(!rp){rp=remotePlayers[data.id]={grp:buildRemoteAvatar(data.id,data.name||'Joueur',data.color,data.face),target:new V3(),yaw:0,yawTarget:0,show:false,scale:1,walk:{phase:0,amp:0},movingUntil:0,color:data.color,face:data.face};scene.add(rp.grp);}
           rp.name=data.name;rp.lastSeen=Date.now();rp.show=data.exploring!==false;rp.underfloor=!!data.underfloor;
-          if(typeof data.x==='number'){rp.target.set(data.x,data.y,data.z);rp.yawTarget=data.yaw||0;
-            if(!rp.placed){rp.grp.position.copy(rp.target);rp.yaw=rp.yawTarget;rp.scale=rp.underfloor?UNDER_AVATAR_SCALE:1;rp.grp.scale.setScalar(rp.scale);rp.placed=true;}}
+          // tenue/visage choisis dans le menu, reçus avec la position : on les applique si le joueur en a changé
+          if(rp.color!==data.color){rp.color=data.color;if(rp.grp.clothMat)rp.grp.clothMat.color.set(data.color!=null?data.color:colorForId(data.id));}
+          if(rp.face!==data.face){rp.face=data.face;if(rp.grp.faceMat){rp.grp.faceMat.map=makeFaceTex(data.face||data.id);rp.grp.faceMat.needsUpdate=true;}}
+          if(typeof data.x==='number'){
+            if(rp.placed){const dmv=Math.hypot(data.x-rp.target.x,data.z-rp.target.z);if(dmv>.02)rp.movingUntil=Date.now()+450;}
+            rp.target.set(data.x,data.y,data.z);rp.yawTarget=data.yaw||0;
+            if(!rp.placed){rp.grp.position.copy(rp.target);rp.yaw=rp.yawTarget;rp.scale=rp.underfloor?UNDER_AVATAR_SCALE:1;rp.grp.scale.setScalar(rp.scale);rp.placed=true;}
+          }
         }
         // pas de renderSessionLabel() ici : avec beaucoup de joueurs, chacun publie ~5 fois/seconde, donc
         // reconstruire toute la liste (DOM) à chaque message reçu de chacun d'eux fait vite des dizaines de
@@ -1819,6 +1878,30 @@ setTimeout(()=>{fadeEl.style.opacity=0;},200);
 setStatus('');goBtn.disabled=false;goBtn.textContent='Commencer la visite';goBtn.focus();
 if(!$('codeInput').value)$('codeInput').value=genCode();
 $('genCodeBtn').addEventListener('click',()=>{$('codeInput').value=genCode();$('codeInput').focus();});
+// menu de personnalisation (visage + couleur de tenue), sur l'écran d'accueil
+if(customColor==null)customColor=colorForId(playerId);
+if(playerBody.clothMat)playerBody.clothMat.color.set(customColor);
+function renderColorSwatches(){
+  const wrap=$('colorSwatches');if(!wrap)return;wrap.innerHTML='';
+  CUSTOM_COLORS.forEach(c=>{
+    const b=document.createElement('button');b.type='button';b.className='swatch'+(c===customColor?' sel':'');
+    b.style.background='#'+new T.Color(c).getHexString();b.title='Choisir cette couleur';
+    b.addEventListener('click',()=>{
+      customColor=c;saveCustom();renderColorSwatches();
+      if(playerBody.clothMat)playerBody.clothMat.color.set(c);
+      pushProgress();
+    });
+    wrap.appendChild(b);
+  });
+}
+function paintFacePreview(){
+  const cv=$('faceCanvas');if(!cv)return;const x=cv.getContext('2d');x.clearRect(0,0,160,160);drawFaceOn(x,customFaceSeed||playerId);
+}
+renderColorSwatches();paintFacePreview();
+const rerollBtn=$('rerollFaceBtn');
+if(rerollBtn)rerollBtn.addEventListener('click',()=>{
+  customFaceSeed=Math.random().toString(36).slice(2,10);paintFacePreview();saveCustom();pushProgress();
+});
 const sessionCopyBtn=$('sessionCopyBtn');
 if(sessionCopyBtn)sessionCopyBtn.addEventListener('click',()=>{
   if(!sessionCode)return;
